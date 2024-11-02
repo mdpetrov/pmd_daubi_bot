@@ -1,0 +1,4 @@
+*.log
+text_phrases.csv
+.ipynb_checkpoints/
+.token
