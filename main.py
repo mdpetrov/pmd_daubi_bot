@@ -75,4 +75,11 @@ def get_message_group(message):
     write_log(message.chat.id, f'{global_params}')
         
 if __name__ == '__main__':
-	bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
+    while True:
+        try:
+            write_log(0, 'Restart the bot')
+            bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
+        except Exception as e:
+            write_log(0, 'Error in execution')
+            write_log(0, e)
+            time.sleep(60*10)
