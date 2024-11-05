@@ -43,7 +43,8 @@ def random_phrase(chat_id):
     
 def set_local_params(params:dict):
     ''' Creates empty dict with params for new session '''
-    params.update({'last_time_message_sent':0})
+    params.update({'last_time_message_sent':0,
+                    'last_time_message_received':0})
     
 @bot.message_handler(chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_dm(message):
@@ -53,19 +54,21 @@ def get_message_dm(message):
     send_message(message.chat.id, text='Я ДАУБЛЮ ТОЛЬКО В ГРУППАХ', params=local_params, sleep=10)
     global_params[message.chat.id] = local_params
 
-@bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 5))
+@bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
     global global_params
     local_params = global_params.setdefault(message.chat.id, {})
     if len(local_params) == 0:
         set_local_params(local_params)
+
     to_send = False
     rand = random.random()
-    write_log(message.chat.id, f': Random = {rand}')
+    write_log(message.chat.id, f': Random = {round(rand, 2)}')
     
-    if time.time() - local_params['last_time_message_sent'] >= 60 * 60 * 3:
-        write_log(message.chat.id, f": Last time sent: {local_params['last_time_message_sent']}")
+    if time.time() - local_params['last_time_message_received'] >= 60 * 60 * 3:
+        write_log(message.chat.id, f": Last time sent: {local_params['last_time_message_received']}")
         to_send = True
+        
     if rand <= 0.05:
         to_send = True
     if to_send:
@@ -73,6 +76,8 @@ def get_message_group(message):
         send_message(message.chat.id, text=phrase, params=local_params, sleep=0.5)
     global_params[message.chat.id] = local_params
     write_log(message.chat.id, f'{global_params}')
+    
+    local_params['last_time_message_received'] = time.time()
         
 if __name__ == '__main__':
     while True:
