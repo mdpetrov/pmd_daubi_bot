@@ -11,6 +11,9 @@ import pandas as pd
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+if not os.path.isfile('text_phrases.csv'):
+    raise OSError('text_phrases not found')
+
 with open('.token', 'rt', encoding='utf8') as fp:
 	token = fp.read()
 
@@ -87,4 +90,4 @@ if __name__ == '__main__':
         except Exception as e:
             write_log(0, 'Error in execution')
             write_log(0, e)
-            time.sleep(60*10)
+            time.sleep(10*60) #10 minutes
