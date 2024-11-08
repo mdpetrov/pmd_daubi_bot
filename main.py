@@ -55,6 +55,8 @@ def set_local_params(params:dict):
 def get_message_readycheck(message):
     global global_params
     local_params = global_params.setdefault(message.chat.id, {})
+    if len(local_params) == 0:
+        set_local_params(local_params)
     readycheck_cd = 60 * 60
     cur_time = time.time()
     time_diff = cur_time - local_params['last_ready_check']
