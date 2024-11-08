@@ -59,6 +59,7 @@ def get_message_readycheck(message):
         set_local_params(local_params)
     readycheck_cd = 60 * 60
     cur_time = time.time()
+    write_log(message.chat.id, print(local_params))
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
     if time_remain > 0:
@@ -67,6 +68,7 @@ def get_message_readycheck(message):
         text = ' Объявите время гейминга! @alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
     send_message(message.chat.id, text=text, params=local_params)
     local_params['last_ready_check'] = cur_time
+    global_params[message.chat.id] = local_params
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
@@ -77,7 +79,9 @@ def get_message_start(message):
     send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
     start_text = '''Список команд:
 /start - вывести стартовое сообщение
-/add_phrase "название фразы" - добавить фразу'''
+/ready_check - Провести проверку готовности
+/add_phrase "название фразы" - добавить фразу (пока не работает)
+'''
     send_message(message.chat.id, text=start_text, params=local_params)
     global_params[message.chat.id] = local_params
 
