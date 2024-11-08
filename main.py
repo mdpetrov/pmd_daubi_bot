@@ -62,7 +62,7 @@ def get_message_readycheck(message):
     if time_remain > 0:
         text = f'Ready Check Cooldown: {round(time_remain / 60,0)} min'
     else:
-        text = ' Объявите время гейминга!@alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
+        text = ' Объявите время гейминга! @alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
     send_message(message.chat.id, text=text, params=local_params)
     local_params['last_ready_check'] = cur_time
 
