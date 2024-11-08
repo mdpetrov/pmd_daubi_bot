@@ -1,3 +1,5 @@
+#!/bin/bash
+
 prog_path=/dev/prog/bot/pmd_daubi_bot
 
 sudo apt install python3.10-venv
