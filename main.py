@@ -57,6 +57,7 @@ def get_message_readycheck(message):
     local_params = global_params.setdefault(message.chat.id, {})
     if len(local_params) == 0:
         set_local_params(local_params)
+    write_log(message.chat.id, 'Trying to perform a ready check')
     readycheck_cd = 60 * 60
     cur_time = time.time()
     write_log(message.chat.id, print(local_params))
