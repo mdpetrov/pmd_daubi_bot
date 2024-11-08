@@ -111,13 +111,13 @@ def get_message_group(message):
         write_log(message.chat.id, f": Last time sent: {local_params['last_time_message_received']}")
         to_send = True
         
-    if rand <= 0.05:
+    if rand <= 0.04:
         to_send = True
     if to_send:
         phrase = random_phrase(message.chat.id)
         send_message(message.chat.id, text=phrase, params=local_params, sleep=0.5)
     global_params[message.chat.id] = local_params
-    write_log(message.chat.id, f'{global_params}')
+    write_log(message.chat.id, f'{local_params}')
     
     local_params['last_time_message_received'] = time.time()
         
