@@ -48,7 +48,7 @@ def random_phrase(chat_id):
 def set_local_params(params:dict):
     ''' Creates empty dict with params for new session '''
     params.update({'last_time_message_sent':0,
-                    'last_time_message_received':0,
+                    'last_time_message_received':time.time(),
                     'last_ready_check':0})
     
 @bot.message_handler(commands=['ready_check'], chat_types=['private', 'group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
@@ -60,7 +60,7 @@ def get_message_readycheck(message):
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
     if time_remain > 0:
-        text = f'Ready Check Cooldown: {time_remain / 60} min'
+        text = f'Ready Check Cooldown: {round(time_remain / 60,0)} min'
     else:
         text = ' Объявите время гейминга!@alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
     send_message(message.chat.id, text=text, params=local_params)
@@ -100,7 +100,7 @@ def get_message_group(message):
     rand = random.random()
     write_log(message.chat.id, f': Random = {round(rand, 2)}')
     
-    if time.time() - local_params['last_time_message_received'] >= 60 * 60 * 3:
+    if time.time() - local_params['last_time_message_received'] >= 60 * 60 * 5:
         write_log(message.chat.id, f": Last time sent: {local_params['last_time_message_received']}")
         to_send = True
         
