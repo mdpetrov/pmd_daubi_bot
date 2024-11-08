@@ -12,20 +12,25 @@ import re
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-if not os.path.isfile('text_phrases.csv'):
+path = {'text_phrases': './.secret/input/text_phrases.csv',
+        'token': './.secret/token/.token',
+        'log_dir': './.secret/log',
+        'data_dir': './.secret/data'}
+
+if not os.path.isfile(path['text_phrases']):
     raise OSError('text_phrases not found')
 
-with open('./.secret/token/.token', 'rt', encoding='utf8') as fp:
+with open(path['token'], 'rt', encoding='utf8') as fp:
 	token = fp.read()
 
 bot = telebot.TeleBot(token, threaded=False)
 
 global_params = {}
-# params['last_time_message_sent'] = 0
+
 random.seed(datetime.datetime.now().timestamp())
 
 def write_log(chat_id, text):
-    with open(f'./.secret/log/{chat_id}.log', mode='a') as log_con:
+    with open(os.path.join(path['log_dir'], f'{chat_id}.log'), mode='a') as log_con:
         log_con.write(f'{datetime.datetime.now()}: {text}\n')
 
 def send_message(chat_id, text, params, sleep=0.5, **kwargs):
@@ -38,7 +43,7 @@ def send_message(chat_id, text, params, sleep=0.5, **kwargs):
 	return message
 
 def random_phrase(chat_id):
-    with open('./.secret/input/text_phrases.csv', mode='rt', encoding='utf-8') as con:
+    with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
         write_log(chat_id, ': Load phrases')
         phrases = pd.read_csv(con, sep=';')
         phrase = phrases['phrase'].sample(n=1, weights=phrases['weight']).tolist()[0]
