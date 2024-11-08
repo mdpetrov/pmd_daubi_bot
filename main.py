@@ -8,6 +8,7 @@ import json
 import os
 import numpy as np
 import pandas as pd
+import re
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -49,13 +50,27 @@ def set_local_params(params:dict):
     params.update({'last_time_message_sent':0,
                     'last_time_message_received':0})
     
-@bot.message_handler(chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
-def get_message_dm(message):
+@bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
+def get_message_start(message):
     global global_params
     local_params = global_params.setdefault(message.chat.id, {})
     set_local_params(local_params)
-    send_message(message.chat.id, text='Я ДАУБЛЮ ТОЛЬКО В ГРУППАХ', params=local_params, sleep=10)
+    send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
+    start_text = '''Список команд:
+/start - вывести стартовое сообщение
+/add_phrase "название фразы" - добавить фразу'''
+    send_message(message.chat.id, text=start_text, params=local_params)
     global_params[message.chat.id] = local_params
+
+@bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
+def get_message_add_phrase(message):
+    global global_params
+    local_params = global_params.setdefault(message.chat.id, {})
+    text = message.text 
+    text = text.replace('/add_phrase ', '')
+    text = text.replace('"', '')
+    
+    
 
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
