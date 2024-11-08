@@ -48,13 +48,30 @@ def random_phrase(chat_id):
 def set_local_params(params:dict):
     ''' Creates empty dict with params for new session '''
     params.update({'last_time_message_sent':0,
-                    'last_time_message_received':0})
+                    'last_time_message_received':0,
+                    'last_ready_check':0})
     
+@bot.message_handler(commands=['ready_check'], chat_types=['private', 'group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
+def get_message_readycheck(message):
+    global global_params
+    local_params = global_params.setdefault(message.chat.id, {})
+    readycheck_cd = 60 * 60
+    cur_time = time.time()
+    time_diff = cur_time - local_params['last_ready_check']
+    time_remain = readycheck_cd - time_diff
+    if time_remain > 0:
+        text = f'Ready Check Cooldown: {time_remain / 60} min'
+    else:
+        text = ' Объявите время гейминга!@alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
+    send_message(message.chat.id, text=text, params=local_params)
+    local_params['last_ready_check'] = cur_time
+
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
     global global_params
     local_params = global_params.setdefault(message.chat.id, {})
-    set_local_params(local_params)
+    if len(local_params) == 0:
+        set_local_params(local_params)
     send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
     start_text = '''Список команд:
 /start - вывести стартовое сообщение
