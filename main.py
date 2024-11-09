@@ -93,7 +93,7 @@ def set_local_params(params:dict):
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
-    local_params = load_params(chat_id)
+    local_params = load_params(message.chat.id)
     write_log(message.chat.id, 'Trying to perform a ready check')
     readycheck_cd = 60 * 60
     cur_time = time.time()
@@ -108,11 +108,11 @@ def get_message_readycheck(message):
         # text = 'Объявите время гейминга! @alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
     send_message(message.chat.id, text=text, params=local_params)
     local_params['last_ready_check'] = cur_time
-    save_params(local_params)
+    save_params(message.chat.id, local_params)
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
-    local_params = load_params(chat_id)
+    local_params = load_params(message.chat.id)
     send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
     start_text = '''Список команд:
 /start - вывести стартовое сообщение
@@ -120,20 +120,20 @@ def get_message_start(message):
 /add_phrase "название фразы" - добавить фразу (пока не работает)
 '''
     send_message(message.chat.id, text=start_text, params=local_params)
-    save_params(local_params)
+    save_params(message.chat.id, local_params)
 
 @bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_add_phrase(message):
     if len(local_params) == 0:
         set_local_params(local_params)
     send_message(message.chat.id, text='Введи фразу', params=local_params)
-    save_params(local_params)
+    save_params(message.chat.id, local_params)
     
     
 
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
-    local_params = load_params(chat_id)
+    local_params = load_params(message.chat.id)
 
     to_send = False
     rand = random.random()
@@ -151,7 +151,7 @@ def get_message_group(message):
     write_log(message.chat.id, f'{local_params}')
     
     local_params['last_time_message_received'] = time.time()
-    save_params(local_params)
+    save_params(message.chat.id, local_params)
         
 if __name__ == '__main__':
     while True:
