@@ -13,8 +13,14 @@ import re
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # Custom packages
-from .pmd_daubi_bot.params_operations import load_params, save_params
+
 from .pmd_daubi_bot import config
+from .pmd_daubi_bot.params_operations import ParamsOperations
+from .pmd_daubi_bot.log_operations import LogOperations
+
+PS = ParamsOperations(config)
+LO = LogOperations(config)
+BO = BotOperations(bot)
 
 path = config.path
 
@@ -29,35 +35,14 @@ bot = telebot.TeleBot(token, threaded=False)
 
 random.seed(datetime.datetime.now().timestamp())
 
-
-
-def write_log(chat_id, text):
-    with open(os.path.join(path['log_dir'], f'{chat_id}.log'), mode='a') as log_con:
-        log_con.write(f'{datetime.datetime.now()}: {text}\n')
-
-def send_message(chat_id, text, params, sleep=0.5, **kwargs):
-	''' Send a message with certain delay '''
-	interval = time.time() - params['last_time_message_sent']
-	if (interval < sleep):
-		time.sleep(sleep - interval)
-	message = bot.send_message(chat_id, text, **kwargs)
-	params['last_time_message_sent'] = time.time()
-	return message
-
-def random_phrase(chat_id):
-    with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
-        write_log(chat_id, ': Load phrases')
-        phrases = pd.read_csv(con, sep=';')
-        phrase = phrases['phrase'].sample(n=1, weights=phrases['weight']).tolist()[0]
-        write_log(chat_id, f'{phrase}')
-        return phrase
     
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
     local_params = load_params(message.chat.id)
+    readycheck_cd = config.param_value['readycheck_cd']
+    
     write_log(message.chat.id, 'Trying to perform a ready check')
-    readycheck_cd = 60 * 60
     cur_time = time.time()
     write_log(message.chat.id, local_params)
     time_diff = cur_time - local_params['last_ready_check']
