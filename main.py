@@ -25,9 +25,47 @@ with open(path['token'], 'rt', encoding='utf8') as fp:
 
 bot = telebot.TeleBot(token, threaded=False)
 
-global_params = {}
+# global_params = {}
 
 random.seed(datetime.datetime.now().timestamp())
+
+def load_params(chat_id):
+    '''Load json with local parameters for the chat'''
+    global path 
+    param_dir = path['data_dir']
+    param_name = f"{chat_id}.param"
+    param_path = os.path.join(param_dir, param_name)
+    if os.isfile(os.path.isfile(param_path)):
+        with open(param_path, 'r') as fp:
+            params = json.load(fp)
+        if not isinstance(dict, params):
+            error_text = f'''Loaded params object has type {type(params)} instead of {type(dict)}
+Debug info:
+\tChat id: {chat_id}'''
+# \tChat name: {chat_id} # Will be added in future
+
+            raise TypeError(error_text)
+    else:
+        params = {}
+        set_local_params(params)
+    return params
+    
+def save_params(chat_id, params):
+    '''Save json with local parameters for the chat'''
+    global path 
+    
+    if not isinstance(dict, params):
+        error_text = f'''Params object has type {type(params)} instead of {type(dict)}
+Debug info:
+\tChat id: {chat_id}'''
+# \tChat name: {chat_id} # Will be added in future
+
+            raise TypeError(error_text)
+    param_dir = path['data_dir']
+    param_name = f"{chat_id}.param"
+    param_path = os.path.join(param_dir, param_name)
+    with open(param_path, 'w') as fp:
+        params = json.dump(params, fp)
 
 def write_log(chat_id, text):
     with open(os.path.join(path['log_dir'], f'{chat_id}.log'), mode='a') as log_con:
@@ -58,10 +96,7 @@ def set_local_params(params:dict):
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
-    global global_params
-    local_params = global_params.setdefault(message.chat.id, {})
-    if len(local_params) == 0:
-        set_local_params(local_params)
+    local_params = load_params(chat_id)
     write_log(message.chat.id, 'Trying to perform a ready check')
     readycheck_cd = 60 * 60
     cur_time = time.time()
@@ -76,14 +111,11 @@ def get_message_readycheck(message):
         # text = 'Объявите время гейминга! @alexanderkabadzha @idynnn @TkEgor @maxpetrov @Filanka @iskander_tarkinsky @Aquamarine_Eyes @mndche @msvst @van_de @elina_zak @a_dymchenko'
     send_message(message.chat.id, text=text, params=local_params)
     local_params['last_ready_check'] = cur_time
-    global_params[message.chat.id] = local_params
+    save_params(local_params)
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
-    global global_params
-    local_params = global_params.setdefault(message.chat.id, {})
-    if len(local_params) == 0:
-        set_local_params(local_params)
+    local_params = load_params(chat_id)
     send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
     start_text = '''Список команд:
 /start - вывести стартовое сообщение
@@ -91,24 +123,20 @@ def get_message_start(message):
 /add_phrase "название фразы" - добавить фразу (пока не работает)
 '''
     send_message(message.chat.id, text=start_text, params=local_params)
-    global_params[message.chat.id] = local_params
+    save_params(local_params)
 
 @bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_add_phrase(message):
-    global global_params
-    local_params = global_params.setdefault(message.chat.id, {})
-    text = message.text 
-    text = text.replace('/add_phrase ', '')
-    text = text.replace('"', '')
+    if len(local_params) == 0:
+        set_local_params(local_params)
+    send_message(message.chat.id, text='Введи фразу', params=local_params)
+    save_params(local_params)
     
     
 
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
-    global global_params
-    local_params = global_params.setdefault(message.chat.id, {})
-    if len(local_params) == 0:
-        set_local_params(local_params)
+    local_params = load_params(chat_id)
 
     to_send = False
     rand = random.random()
@@ -123,10 +151,10 @@ def get_message_group(message):
     if to_send:
         phrase = random_phrase(message.chat.id)
         send_message(message.chat.id, text=phrase, params=local_params, sleep=0.5)
-    global_params[message.chat.id] = local_params
     write_log(message.chat.id, f'{local_params}')
     
     local_params['last_time_message_received'] = time.time()
+    save_params(local_params)
         
 if __name__ == '__main__':
     while True:
