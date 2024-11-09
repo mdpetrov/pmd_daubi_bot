@@ -56,7 +56,7 @@ def set_local_params(params:dict):
                     'last_time_message_received':time.time(),
                     'last_ready_check':0})
     
-@bot.message_handler(commands=['ready_check'], chat_types=['private', 'group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
+@bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
     global global_params
     local_params = global_params.setdefault(message.chat.id, {})
@@ -69,7 +69,7 @@ def get_message_readycheck(message):
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
     if time_remain > 0:
-        text = f'Ready Check Cooldown: {int(time_remain / 60,0)} min'
+        text = f'Ready Check Cooldown: {int(time_remain / 60)} min'
     else:
         chat_members = ['@' + member.user.username for member in bot.get_chat_administrators(message.chat.id) if member.user.is_bot == False]
         text = f'Объявите время гейминга! {" ".join(chat_members)}'
