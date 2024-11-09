@@ -65,11 +65,11 @@ def get_message_readycheck(message):
     write_log(message.chat.id, 'Trying to perform a ready check')
     readycheck_cd = 60 * 60
     cur_time = time.time()
-    write_log(message.chat.id, print(local_params))
+    write_log(message.chat.id, local_params)
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
     if time_remain > 0:
-        text = f'Ready Check Cooldown: {round(time_remain / 60,0)} min'
+        text = f'Ready Check Cooldown: {int(time_remain / 60,0)} min'
     else:
         chat_members = ['@' + member.user.username for member in bot.get_chat_administrators(message.chat.id) if member.user.is_bot == False]
         text = f'Объявите время гейминга! {" ".join(chat_members)}'
