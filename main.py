@@ -43,7 +43,6 @@ def load_params(chat_id):
 Debug info:
 \tChat id: {chat_id}'''
 # \tChat name: {chat_id} # Will be added in future
-
             raise TypeError(error_text)
     else:
         params = {}
@@ -53,7 +52,6 @@ Debug info:
 def save_params(chat_id, params):
     '''Save json with local parameters for the chat'''
     global path 
-    
     if not isinstance(dict, params):
         error_text = f'''Params object has type {type(params)} instead of {type(dict)}
 Debug info:
