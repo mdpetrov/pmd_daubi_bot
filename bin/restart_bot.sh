@@ -9,5 +9,5 @@ kill -9 $pid
 
 sleep 5
 
-nohup $prog_path/venv/bin/python3 $prog_path/main.py &
+nohup $prog_path/venv/bin/python3 $prog_path/main.py >& nohup.out &
 echo $! > $prog_path/pid.nohup
