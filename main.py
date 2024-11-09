@@ -59,8 +59,7 @@ def save_params(chat_id, params):
 Debug info:
 \tChat id: {chat_id}'''
 # \tChat name: {chat_id} # Will be added in future
-
-            raise TypeError(error_text)
+        raise TypeError(error_text)
     param_dir = path['data_dir']
     param_name = f"{chat_id}.param"
     param_path = os.path.join(param_dir, param_name)
