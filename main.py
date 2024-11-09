@@ -12,57 +12,24 @@ import re
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-path = {'text_phrases': './.secret/input/text_phrases.csv',
-        'token': './.secret/token/.token',
-        'log_dir': './.secret/log',
-        'data_dir': './.secret/data'}
+# Custom packages
+from .pmd_daubi_bot.params_operations import load_params, save_params
+from .pmd_daubi_bot import config
 
-if not os.path.isfile(path['text_phrases']):
-    raise OSError('text_phrases not found')
+path = config.path
+
+# if not os.path.isfile(path['text_phrases']):
+    # raise OSError('text_phrases not found')
 
 with open(path['token'], 'rt', encoding='utf8') as fp:
 	token = fp.read()
 
 bot = telebot.TeleBot(token, threaded=False)
 
-# global_params = {}
 
 random.seed(datetime.datetime.now().timestamp())
 
-def load_params(chat_id):
-    '''Load json with local parameters for the chat'''
-    global path 
-    param_dir = path['data_dir']
-    param_name = f"{chat_id}.param"
-    param_path = os.path.join(param_dir, param_name)
-    if os.path.isfile(param_path):
-        with open(param_path, 'r') as fp:
-            params = json.load(fp)
-        if not isinstance(params, dict):
-            error_text = f'''Loaded params object has type {type(params)} instead of {type(dict)}
-Debug info:
-\tChat id: {chat_id}'''
-# \tChat name: {chat_id} # Will be added in future
-            raise TypeError(error_text)
-    else:
-        params = {}
-        set_local_params(params)
-    return params
-    
-def save_params(chat_id, params):
-    '''Save json with local parameters for the chat'''
-    global path 
-    if not isinstance(params, dict):
-        error_text = f'''Params object has type {type(params)} instead of {type(dict)}
-Debug info:
-\tChat id: {chat_id}'''
-# \tChat name: {chat_id} # Will be added in future
-        raise TypeError(error_text)
-    param_dir = path['data_dir']
-    param_name = f"{chat_id}.param"
-    param_path = os.path.join(param_dir, param_name)
-    with open(param_path, 'w') as fp:
-        params = json.dump(params, fp)
+
 
 def write_log(chat_id, text):
     with open(os.path.join(path['log_dir'], f'{chat_id}.log'), mode='a') as log_con:
@@ -85,11 +52,6 @@ def random_phrase(chat_id):
         write_log(chat_id, f'{phrase}')
         return phrase
     
-def set_local_params(params:dict):
-    ''' Creates empty dict with params for new session '''
-    params.update({'last_time_message_sent':0,
-                    'last_time_message_received':time.time(),
-                    'last_ready_check':0})
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
