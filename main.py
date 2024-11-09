@@ -35,7 +35,7 @@ def load_params(chat_id):
     param_dir = path['data_dir']
     param_name = f"{chat_id}.param"
     param_path = os.path.join(param_dir, param_name)
-    if os.isfile(os.path.isfile(param_path)):
+    if os.path.isfile(param_path):
         with open(param_path, 'r') as fp:
             params = json.load(fp)
         if not isinstance(dict, params):
