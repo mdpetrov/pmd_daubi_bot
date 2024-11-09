@@ -38,7 +38,7 @@ def load_params(chat_id):
     if os.path.isfile(param_path):
         with open(param_path, 'r') as fp:
             params = json.load(fp)
-        if not isinstance(dict, params):
+        if not isinstance(params, dict):
             error_text = f'''Loaded params object has type {type(params)} instead of {type(dict)}
 Debug info:
 \tChat id: {chat_id}'''
@@ -52,7 +52,7 @@ Debug info:
 def save_params(chat_id, params):
     '''Save json with local parameters for the chat'''
     global path 
-    if not isinstance(dict, params):
+    if not isinstance(params, dict):
         error_text = f'''Params object has type {type(params)} instead of {type(dict)}
 Debug info:
 \tChat id: {chat_id}'''
