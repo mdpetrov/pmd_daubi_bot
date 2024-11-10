@@ -66,7 +66,7 @@ def get_message_add_phrase(message):
 def check_phrase(message):
     local_params = PO.load_params(message.chat.id)
     phrase = message.text
-    BO.send_message(message.chat.id, text=f'Добавить фразу? (Да/Нет): "{text}"', params=local_params)
+    BO.send_message(message.chat.id, text=f'Добавить фразу? (Да/Нет): "{phrase}"', params=local_params)
     bot.register_next_step_handler(message, add_phrase)
     PO.save_params(message.chat.id, local_params)
 
