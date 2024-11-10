@@ -9,7 +9,6 @@ import os
 import numpy as np
 import pandas as pd
 import re
-import time
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -20,6 +19,12 @@ from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
 
+# Open bot
+with open(path['token'], 'rt', encoding='utf8') as fp:
+	token = fp.read()
+
+bot = telebot.TeleBot(token, threaded=False)
+
 PS = ParamsOperations(config)
 LO = LogOperations(config)
 BO = BotOperations(bot)
@@ -29,10 +34,7 @@ path = config.path
 # if not os.path.isfile(path['text_phrases']):
     # raise OSError('text_phrases not found')
 
-with open(path['token'], 'rt', encoding='utf8') as fp:
-	token = fp.read()
 
-bot = telebot.TeleBot(token, threaded=False)
 
 
 random.seed(datetime.datetime.now().timestamp())
