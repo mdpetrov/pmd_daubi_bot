@@ -59,7 +59,30 @@ def get_message_start(message):
 @bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_add_phrase(message):
     local_params = PO.load_params(message.chat.id)
-    BO.send_message(message.chat.id, text='Введи фразу', params=local_params)
+    BO.send_message(message.chat.id, text='Ты можешь добавить новую фразу в генератор ответов. Фразы добавляются анонимно, а удалить их можно только вручную. Введи фразу:', params=local_params)
+    bot.register_next_step_handler(message, check_phrase)
+    PO.save_params(message.chat.id, local_params)
+
+def check_phrase(message):
+    local_params = PO.load_params(message.chat.id)
+    phrase = message.text
+    BO.send_message(message.chat.id, text=f'Добавить фразу? (Да/Нет): "{text}"', params=local_params)
+    bot.register_next_step_handler(message, add_phrase)
+    PO.save_params(message.chat.id, local_params)
+
+def add_phrase(message):
+    local_params = PO.load_params(message.chat.id)
+    answer = message.text
+    if answer.lower not in ['да', 'нет']:
+        BO.send_message(message.chat.id, text=f'Я не понял твой ответ. Повтори заново.', params=local_params)
+    elif answer.lower in ['нет']:
+        BO.send_message(message.chat.id, text=f'Нет, так нет.', params=local_params)
+    elif answer.lower in ['да']:
+        BO.send_message(message.chat.id, text=f'ПОЕХАЛИ', params=local_params)
+        result = PhO.add_phrase(phrase=phrase)
+        BO.send_message(message.chat.id, text=result, params=local_params)
+    else:
+        raise ValueError('Cannot understand users answer')
     PO.save_params(message.chat.id, local_params)
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
