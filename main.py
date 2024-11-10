@@ -18,7 +18,7 @@ from pmd_daubi_bot.config import config
 from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
-from pmd_daubi_bot.bot_operation import PhraseOperations
+from pmd_daubi_bot.phrase_operation import PhraseOperations
 
 path = config.path
 # Open bot
