@@ -1,6 +1,6 @@
 # import json
 # import os
-# from time import time
+import time
 
 class ParamsOperations(object):
     def __init__(self, config):
