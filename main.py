@@ -19,6 +19,7 @@ from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
 
+path = config.path
 # Open bot
 with open(path['token'], 'rt', encoding='utf8') as fp:
 	token = fp.read()
@@ -29,7 +30,7 @@ PS = ParamsOperations(config)
 LO = LogOperations(config)
 BO = BotOperations(bot)
 
-path = config.path
+
 
 # if not os.path.isfile(path['text_phrases']):
     # raise OSError('text_phrases not found')
