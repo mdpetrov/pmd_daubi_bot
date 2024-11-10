@@ -67,14 +67,15 @@ def get_message_add_phrase(message):
 
 def check_phrase(message):
     local_params = PO.load_params(message.chat.id)
-    phrase = message.text
-    BO.send_message(message.chat.id, text=f'Добавить фразу? (Да/Нет): "{phrase}"', params=local_params)
-    bot.register_next_step_handler(message, add_phrase, phrase=phrase)
-    PO.save_params(message.chat.id, local_params)
+    if message.text:
+        phrase = message.text
+        BO.send_message(message.chat.id, text=f'Добавить фразу? (Да/Нет): "{phrase}"', params=local_params)
+        bot.register_next_step_handler(message, add_phrase, phrase=phrase)
+        PO.save_params(message.chat.id, local_params)
 
 def add_phrase(message, phrase):
     local_params = PO.load_params(message.chat.id)
-    if message:
+    if message.text:
         answer = message.text.strip()
         if answer.lower() not in ['да', 'нет']:
             BO.send_message(message.chat.id, text=f'Я не понял твой ответ. Начни заново.', params=local_params)
