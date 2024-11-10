@@ -9,7 +9,8 @@ kill -9 $pid
 
 echo killed $pid
 
-sleep 2
+python3 setup.py install
+# sleep 2
 
 echo "" > nohup.out
 nohup $prog_path/venv/bin/python3 $prog_path/main.py >& nohup.out &

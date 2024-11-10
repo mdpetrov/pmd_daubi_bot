@@ -14,9 +14,9 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # Custom packages
 
-from .pmd_daubi_bot import config
-from .pmd_daubi_bot.params_operations import ParamsOperations
-from .pmd_daubi_bot.log_operations import LogOperations
+from pmd_daubi_bot import config
+from pmd_daubi_bot.params_operations import ParamsOperations
+from pmd_daubi_bot.log_operations import LogOperations
 
 PS = ParamsOperations(config)
 LO = LogOperations(config)
