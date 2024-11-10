@@ -74,17 +74,18 @@ def check_phrase(message):
 
 def add_phrase(message, phrase):
     local_params = PO.load_params(message.chat.id)
-    answer = message.text.strip()
-    if answer.lower() not in ['да', 'нет']:
-        BO.send_message(message.chat.id, text=f'Я не понял твой ответ. Начни заново.', params=local_params)
-    elif answer.lower() in ['нет']:
-        BO.send_message(message.chat.id, text=f'Нет, так нет.', params=local_params)
-    elif answer.lower() in ['да']:
-        BO.send_message(message.chat.id, text=f'ПОЕХАЛИ', params=local_params)
-        result = PhO.add_phrase(phrase=phrase)
-        BO.send_message(message.chat.id, text=result, params=local_params)
-    else:
-        raise ValueError('Cannot understand users answer')
+    if message:
+        answer = message.text.strip()
+        if answer.lower() not in ['да', 'нет']:
+            BO.send_message(message.chat.id, text=f'Я не понял твой ответ. Начни заново.', params=local_params)
+        elif answer.lower() in ['нет']:
+            BO.send_message(message.chat.id, text=f'Нет, так нет.', params=local_params)
+        elif answer.lower() in ['да']:
+            BO.send_message(message.chat.id, text=f'ПОЕХАЛИ', params=local_params)
+            result = PhO.add_phrase(phrase=phrase)
+            BO.send_message(message.chat.id, text=result, params=local_params)
+        else:
+            raise ValueError('Cannot understand users answer')
     PO.save_params(message.chat.id, local_params)
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
