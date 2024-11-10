@@ -34,7 +34,7 @@ class PhraseOperations(object):
     def add_phrase(self, phrase):
         path = self.config.path
         LO = self.LO
-        LO.write_log(chat_id, ': Load phrases')
+        LO.write_log(0, 'Trying to add a new phrase')
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
             phrases = pd.read_csv(con, sep=';')
         if phrase in phrases['phrase']:
