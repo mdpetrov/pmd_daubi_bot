@@ -27,10 +27,10 @@ with open(path['token'], 'rt', encoding='utf8') as fp:
 
 bot = telebot.TeleBot(token, threaded=False)
 
-PS = ParamsOperations(config)
-LO = LogOperations(config)
-BO = BotOperations(bot)
-PhO = PhraseOperations(config)
+PS = ParamsOperations(config=config)
+LO = LogOperations(config=config)
+BO = BotOperations(bot=bot)
+PhO = PhraseOperations(config=config, bot=bot)
 
 
 
