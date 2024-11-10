@@ -51,7 +51,7 @@ def get_message_start(message):
 Список команд:
     /start - вывести стартовое сообщение
     /ready_check - Провести проверку готовности (только в групповых чатах)
-    /add_phrase - Добавить фразу
+    /add_phrase - Добавить фразу (только в ЛС)
 '''
     BO.send_message(message.chat.id, text=start_text, params=local_params)
     PO.save_params(message.chat.id, local_params)
