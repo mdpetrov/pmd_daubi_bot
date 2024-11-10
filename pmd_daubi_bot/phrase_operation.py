@@ -37,9 +37,9 @@ class PhraseOperations(object):
         LO.write_log(0, 'Trying to add a new phrase')
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
             phrases = pd.read_csv(con, sep=';')
-        if phrase in phrases['phrase']:
+        if phrase in phrases['phrase'].tolist():
             return 'Такая фраза уже есть'
         else:
             phrases.loc[len(phrases)] = (phrase, 0.5)
             phrases.to_csv(path['text_phrases'], encoding='utf-8', index=False, sep=';')
-            return 'Успешно добавлено!'
+            return 'Легчайшее добавление'

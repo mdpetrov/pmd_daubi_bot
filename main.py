@@ -74,7 +74,7 @@ def check_phrase(message):
 
 def add_phrase(message, phrase):
     local_params = PO.load_params(message.chat.id)
-    answer = message.text
+    answer = message.text.strip()
     if answer.lower() not in ['да', 'нет']:
         BO.send_message(message.chat.id, text=f'Я не понял твой ответ. Начни заново.', params=local_params)
     elif answer.lower() in ['нет']:
