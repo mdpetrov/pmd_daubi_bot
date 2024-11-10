@@ -1,13 +1,14 @@
 import pandas as pd
 from pmd_daubi_bot.bot_operation import BotOperations
 
-BO = BotOperations(bot)
 
 class PhraseOperations(object):
-    def __init__(self, config):
+    def __init__(self, config, bot):
         self.config = config
+        self.BO = BotOperations(bot)
     def random_phrase(self, chat_id):
         path = self.config.path
+        BO = self.BO
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
             BO.write_log(chat_id, ': Load phrases')
             phrases = pd.read_csv(con, sep=';')
