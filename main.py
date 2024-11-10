@@ -30,7 +30,7 @@ bot = telebot.TeleBot(token, threaded=False)
 PO = ParamsOperations(config=config)
 LO = LogOperations(config=config)
 BO = BotOperations(bot=bot)
-PhO = PhraseOperations(config=config, bot=bot)
+PhO = PhraseOperations(config=config)
 
 
 
