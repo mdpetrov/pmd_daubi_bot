@@ -14,10 +14,11 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # Custom packages
 
-from pmd_daubi_bot.config import config
-from pmd_daubi_bot.params_operation import ParamsOperations
-from pmd_daubi_bot.log_operation import LogOperations
-from pmd_daubi_bot.bot_operation import BotOperations
+import pmd_daubi_bot as pdb
+from pdb import config
+# from pmd_daubi_bot.params_operation import ParamsOperations
+# from pmd_daubi_bot.log_operation import LogOperations
+# from pmd_daubi_bot.bot_operation import BotOperations
 
 path = config.path
 # Open bot
@@ -26,9 +27,9 @@ with open(path['token'], 'rt', encoding='utf8') as fp:
 
 bot = telebot.TeleBot(token, threaded=False)
 
-PS = ParamsOperations(config)
-LO = LogOperations(config)
-BO = BotOperations(bot)
+PS = pdb.ParamsOperations(config)
+LO = pdb.LogOperations(config)
+BO = pdb.BotOperations(bot)
 
 
 
