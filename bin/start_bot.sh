@@ -6,5 +6,7 @@ source $prog_path/venv/bin/activate
 
 python3 setup.py install
 
-nohup $prog_path/venv/bin/python3 $prog_path/main.py &
+echo "" > nohup.out
+nohup $prog_path/venv/bin/python3 $prog_path/main.py >& nohup.out &
+echo $!
 echo $! > $prog_path/pid.nohup

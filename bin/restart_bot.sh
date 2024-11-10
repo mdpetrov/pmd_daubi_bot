@@ -4,15 +4,8 @@ prog_path=/dev/prog/bot/pmd_daubi_bot
 cd $prog_path
 source $prog_path/venv/bin/activate
 
-pid=$(cat pid.nohup)
-kill -9 $pid
+bin/stop_bot.sh
 
-echo killed $pid
+sleep 1
 
-python3 setup.py install
-# sleep 2
-
-echo "" > nohup.out
-nohup $prog_path/venv/bin/python3 $prog_path/main.py >& nohup.out &
-echo $!
-echo $! > $prog_path/pid.nohup
+bin/start_bot.sh
