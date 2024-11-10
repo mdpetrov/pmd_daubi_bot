@@ -1,3 +1,5 @@
+import time
+
 class BotOperations(object):
     def __init__(self, bot):
         self.bot = bot
@@ -10,4 +12,5 @@ class BotOperations(object):
             time.sleep(sleep - interval)
         message = bot.send_message(chat_id, text, **kwargs)
         params['last_time_message_sent'] = time.time()
+        
         return message
