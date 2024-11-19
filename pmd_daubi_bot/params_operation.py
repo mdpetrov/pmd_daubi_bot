@@ -41,4 +41,4 @@ class ParamsOperations(object):
         param_name = f"{chat_id}.param"
         param_path = os.path.join(param_dir, param_name)
         with open(param_path, 'w') as fp:
-            params = json.dump(params, fp)
+            json.dump(params, fp)

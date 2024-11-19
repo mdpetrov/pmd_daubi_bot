@@ -9,6 +9,7 @@ import os
 import numpy as np
 import pandas as pd
 import re
+import logging
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,7 +33,8 @@ LO = LogOperations(config=config)
 BO = BotOperations(bot=bot)
 PhO = PhraseOperations(config=config)
 
-
+LOG_FILENAME = '.secret/log/0.log'
+logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 
 # if not os.path.isfile(path['text_phrases']):
     # raise OSError('text_phrases not found')
@@ -138,6 +140,7 @@ if __name__ == '__main__':
             LO.write_log(0, 'Restart the bot')
             bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
         except Exception as e:
-            LO.write_log(0, 'Error in execution')
-            LO.write_log(0, e)
+            # LO.write_log(0, 'Error in execution')
+            # LO.write_log(0, e)
+            logging.error(e, exc_info=True)
             time.sleep(1*60) # 1 minute
