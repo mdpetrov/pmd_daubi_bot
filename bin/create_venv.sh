@@ -1,6 +1,6 @@
 #!/bin/bash
 
-prog_path=/dev/prog/bot/pmd_daubi_bot
+prog_path=/usr/bot/pmd_daubi_bot
 
 sudo apt install python3.10-venv
 python3 -m venv $prog_path/venv
