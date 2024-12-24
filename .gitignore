@@ -5,3 +5,11 @@ text_phrases.csv
 Untitled.ipynb
 .secret/
 
+__pycache__
+build
+dist
+nohup.out
+pid.nohup
+pmd_daubi_bot.egg-info
+venv
+
