@@ -120,11 +120,12 @@ def get_message_group(message):
     rand = random.random()
     LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand, 2)}')
     
-    if time.time() - local_params['last_time_message_received'] >= 60 * 60 * 10:
+    auto_send_cd_h = rand * (10 - 5) + 5 # gen cd [5,10] hrs
+    if time.time() - local_params['last_time_message_received'] >= auto_send_cd_h * 3600:
         LO.write_log(message.chat.id, f": Last time sent: {local_params['last_time_message_received']}")
         to_send = True
         
-    if rand <= 0.05:
+    if rand <= 0.03:
         to_send = True
     if to_send:
         phrase = PhO.random_phrase(message.chat.id)
