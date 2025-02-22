@@ -13,7 +13,15 @@ class PhraseOperations(object):
         LO.write_log(chat_id, ': Load phrases')
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
             phrases = pd.read_csv(con, sep=';')
-        phrase = phrases['phrase'].sample(n=1, weights=phrases['weight']).tolist()[0]
+            
+        selected_phrase_df = phrases['phrase'].sample(n=1, weights=phrases['weight'])
+        vec_to_decrease = phrases.index.isin(selected_phrase_df.index)
+        vec_to_increase = ~phrases.index.isin(selected_phrase_df.index)
+        
+        phrases.loc[vec_to_decrease, 'weight'] = phrases.loc[vec_to_decrease, 'default_weight'] # Set default weight to selected phrase
+        phrases.loc[vec_to_increase, 'weight'] = phrases.loc[vec_to_increase, 'weight'] + 0.1 # Increase weight to not selected phrases
+        
+        phrase = selected_phrase_df.tolist()[0]
         LO.write_log(chat_id, f'{phrase}')
         return phrase
     
@@ -40,6 +48,6 @@ class PhraseOperations(object):
         if phrase in phrases['phrase'].tolist():
             return 'Такая фраза уже есть'
         else:
-            phrases.loc[len(phrases)] = (phrase, 0.5)
+            phrases.loc[len(phrases)] = (phrase, 99, 0.5)
             phrases.to_csv(path['text_phrases'], encoding='utf-8', index=False, sep=';')
             return 'Легчайшее добавление'
