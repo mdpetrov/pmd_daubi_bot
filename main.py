@@ -115,7 +115,10 @@ def get_message_readycheck(message):
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
     local_params = PO.load_params(message.chat.id)
-
+    
+    if message.reply_to_message.from.username == 'daubi2_bot':
+        BO.send_message(message.chat.id, text='Ну без негатива же...', params=local_params, sleep=0.5)
+    
     to_send = False
     rand = random.random()
     LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand, 2)}')
