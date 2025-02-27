@@ -118,7 +118,7 @@ def get_message_group(message):
     
     if message.reply_to_message:
         if message.reply_to_message.from_user.username == 'daubi2_bot':
-            BO.send_message(message.chat.id, text='Без негатива же...', params=local_params, sleep=0.5)
+            BO.send_message(message.chat.id, text='Без негатива же...', params=local_params, sleep=0.5, reply_to_message_id=message.id)
     
     to_send = False
     rand = random.random()
