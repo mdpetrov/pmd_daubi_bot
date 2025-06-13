@@ -1,6 +1,7 @@
 #!/bin/bash
+set -e
 
-prog_path=/usr/bot/pmd_daubi_bot
+prog_path="$(dirname "$(realpath "$0")")"
 
 sudo apt install python3-venv
 python3 -m venv $prog_path/venv
