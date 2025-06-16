@@ -140,14 +140,5 @@ def get_message_group(message):
     PO.save_params(message.chat.id, local_params)
         
 if __name__ == '__main__':
-    while True:
-        try:
-            LO.write_log(0, 'Restart the bot')
-            bot.polling(none_stop=True, interval=1) #обязательная для работы бота часть
-        except Exception as e:
-            LO.write_log(0, 'Error in execution')
-            # LO.write_log(0, e)
-            logging.basicConfig(level=logging.DEBUG)
-            logging.error(e, exc_info=True)
-            time.sleep(1*60) # 1 minute
-            logging.basicConfig(level=logging.INFO)
+    LO.write_log(0, 'Start the bot')        
+    bot.polling(none_stop=True, interval=1) #обязательная для работы бота 
