@@ -110,7 +110,7 @@ def get_message_readycheck(message):
                 if member.user.username:
                     chat_members.append(f'@{member.user.username}')
                 else:
-                    chat_members.append(f'<a href="tg://user?id={member.user.id}">{member.user.first_name}</a>'')
+                    chat_members.append(f'<a href="tg://user?id={member.user.id}">{member.user.first_name}</a>')
         text = PhO.random_readycheck_phrase(chat_id=message.chat.id)
         text = f'{text} {" ".join(chat_members)}'
         # text = f'Объявите время гейминга! {" ".join(chat_members)}'
