@@ -104,11 +104,17 @@ def get_message_readycheck(message):
     if time_remain > 0:
         text = f'Ready Check Cooldown: {int(time_remain / 60)} min'
     else:
-        chat_members = ['@' + member.user.username for member in bot.get_chat_administrators(message.chat.id) if member.user.is_bot == False]
+        chat_members = []
+        for member in bot.get_chat_administrators(message.chat.id):
+            if member.user.is_bot == False:
+                if member.user.username:
+                    chat_members.append(f'@{member.user.username}')
+                else:
+                    chat_members.append(f'{member.user.first_name}(tg://user?id={member.user.id})')
         text = PhO.random_readycheck_phrase(chat_id=message.chat.id)
         text = f'{text} {" ".join(chat_members)}'
         # text = f'Объявите время гейминга! {" ".join(chat_members)}'
-    BO.send_message(message.chat.id, text=text, params=local_params)
+    BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='MarkdownV2')
     local_params['last_ready_check'] = cur_time
     PO.save_params(message.chat.id, local_params)
 
