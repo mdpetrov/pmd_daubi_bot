@@ -122,12 +122,16 @@ def get_message_readycheck(message):
 def get_message_group(message):
     local_params = PO.load_params(message.chat.id)
     
+    rand = random.random()
     if message.reply_to_message:
         if message.reply_to_message.from_user.username == 'daubi2_bot':
-            BO.send_message(message.chat.id, text='Без негатива же...', params=local_params, sleep=0.5, reply_to_message_id=message.id)
+            if rand <= 0.25:
+                message = 'Без негатива же...'
+            else:
+                message = PhO.random_phrase(message.chat.id)
+            BO.send_message(message.chat.id, text=message, params=local_params, sleep=0.5, reply_to_message_id=message.id)
     
     to_send = False
-    rand = random.random()
     LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand, 2)}')
     
     auto_send_cd_h = rand * (10 - 5) + 5 # gen cd [5,10] hrs
@@ -140,7 +144,6 @@ def get_message_group(message):
     if to_send:
         phrase = PhO.random_phrase(message.chat.id)
         BO.send_message(message.chat.id, text=phrase, params=local_params, sleep=0.5)
-    LO.write_log(message.chat.id, f'{local_params}')
     
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
