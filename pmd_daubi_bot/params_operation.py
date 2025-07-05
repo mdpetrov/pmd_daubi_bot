@@ -5,9 +5,10 @@ import time
 class ParamsOperations(object):
     def __init__(self, config):
         self.def_params = {'last_time_message_sent':0,
-                          'last_time_message_received': time.time(),
+                          'last_time_message_received': 0,
                           'last_ready_check':0,
-                          'ready_check_cd':60 * 60}
+                          'ready_check_cd':config.param_value['readycheck_cd'],
+                          'phrases':{}}
         self.config = config
 
     def load_params(self, chat_id):
