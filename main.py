@@ -126,10 +126,10 @@ def get_message_group(message):
     if message.reply_to_message:
         if message.reply_to_message.from_user.username == 'daubi2_bot':
             if rand <= 0.25:
-                message = 'Без негатива же...'
+                message_sent = 'Без негатива же...'
             else:
-                message = PhO.random_phrase(message.chat.id)
-            BO.send_message(message.chat.id, text=message, params=local_params, sleep=0.5, reply_to_message_id=message.id)
+                message_sent = PhO.random_phrase(message.chat.id)
+            BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
     
     to_send = False
     LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand, 2)}')
