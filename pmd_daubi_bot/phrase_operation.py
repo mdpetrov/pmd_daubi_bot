@@ -26,7 +26,6 @@ class PhraseOperations(object):
         self.save_phrases(phrases.to_dict(orient='records'))
         
         phrase = selected_phrase_df.tolist()[0]
-        LO.write_log(chat_id, phrase')
         return phrase
     
     def random_readycheck_phrase(self, chat_id):
