@@ -25,7 +25,7 @@ class ParamsOperations(object):
                                     Debug info:
                                     \tChat id: {chat_id}'''
                 raise TypeError(error_text)
-            params = check_params(params)
+            params = self.check_params(params)
         else:
             params = self.def_params
         return params
