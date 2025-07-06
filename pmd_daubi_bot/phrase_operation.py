@@ -65,4 +65,4 @@ class PhraseOperations(object):
     def save_phrases(self, phrases):
         path = self.config.path
         with open(path['text_phrases'], mode='wt', encoding='utf-8') as con:
-            json.dump(phrases, con)
+            json.dump(phrases, con, indent=4, ensure_ascii=False)
