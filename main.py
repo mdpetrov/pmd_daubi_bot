@@ -104,25 +104,34 @@ def get_message_readycheck(message):
     if time_remain > 0:
         text = f'Ready Check Cooldown: {int(time_remain / 60)} min'
     else:
-        chat_members = ['@' + member.user.username for member in bot.get_chat_administrators(message.chat.id) if member.user.is_bot == False]
+        chat_members = []
+        for member in bot.get_chat_administrators(message.chat.id):
+            if member.user.is_bot == False:
+                if member.user.username:
+                    chat_members.append(f'@{member.user.username}')
+                else:
+                    chat_members.append(f'<a href="tg://user?id={member.user.id}">{member.user.first_name}</a>')
         text = PhO.random_readycheck_phrase(chat_id=message.chat.id)
         text = f'{text} {" ".join(chat_members)}'
         local_params['last_ready_check'] = cur_time
         # text = f'Объявите время гейминга! {" ".join(chat_members)}'
-    BO.send_message(message.chat.id, text=text, params=local_params)
-    # local_params['last_ready_check'] = cur_time
+    BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML')
     PO.save_params(message.chat.id, local_params)
 
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
     local_params = PO.load_params(message.chat.id)
     
+    rand = random.random()
     if message.reply_to_message:
         if message.reply_to_message.from_user.username == 'daubi2_bot':
-            BO.send_message(message.chat.id, text='Без негатива же...', params=local_params, sleep=0.5, reply_to_message_id=message.id)
+            if rand <= 0.25:
+                message_sent = 'Без негатива же...'
+            else:
+                message_sent = PhO.random_phrase(message.chat.id)
+            BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
     
     to_send = False
-    rand = random.random()
     LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand, 2)}')
     
     auto_send_cd_h = rand * (10 - 5) + 5 # gen cd [5,10] hrs
@@ -135,7 +144,6 @@ def get_message_group(message):
     if to_send:
         phrase = PhO.random_phrase(message.chat.id)
         BO.send_message(message.chat.id, text=phrase, params=local_params, sleep=0.5)
-    LO.write_log(message.chat.id, f'{local_params}')
     
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
