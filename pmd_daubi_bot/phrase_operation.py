@@ -191,6 +191,6 @@ class PhraseOperations(object):
         
         else:
             # For neutral replies, use a lower probability to avoid spam
-            if random.random() <= keywords['random_response_probability']:
-                return self.random_phrase(0)  # Use weighted phrase selection for neutral replies
+            # if random.random() <= keywords['random_response_probability']:
+            #     return self.random_phrase(0)  # Use weighted phrase selection for neutral replies
             return None
