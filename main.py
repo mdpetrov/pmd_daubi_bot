@@ -122,28 +122,29 @@ def get_message_readycheck(message):
 def get_message_group(message):
     local_params = PO.load_params(message.chat.id)
     
-    rand = random.random()
+    # Handle replies to bot messages
     if message.reply_to_message:
         if message.reply_to_message.from_user.username == 'daubi2_bot':
-            if rand <= 0.25:
-                message_sent = 'Без негатива же...'
-            else:
+            # Use phrase operations to analyze reply and get response
+            message_sent = PhO.analyze_reply_to_bot(message.text)
+            if message_sent is None:
+                # Use weighted phrase selection for neutral replies
                 message_sent = PhO.random_phrase(message.chat.id)
             BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
     
-    to_send = False
-    LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand, 2)}')
+    # Use phrase operations to analyze message and decide response
+    should_respond, response_reason, response_phrase = PhO.analyze_message_and_decide_response(
+        message.text, 
+        message.chat.id, 
+        local_params['last_time_message_received']
+    )
     
-    auto_send_cd_h = rand * (10 - 5) + 5 # gen cd [5,10] hrs
-    if time.time() - local_params['last_time_message_received'] >= auto_send_cd_h * 3600:
-        LO.write_log(message.chat.id, f": Last time sent: {local_params['last_time_message_received']}")
-        to_send = True
-        
-    if rand <= 0.04:
-        to_send = True
-    if to_send:
-        phrase = PhO.random_phrase(message.chat.id)
-        BO.send_message(message.chat.id, text=phrase, params=local_params, sleep=0.5)
+    # Log the decision
+    rand_val = random.random()
+    LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand_val, 2)}, Should respond: {should_respond}, Reason: {response_reason}')
+    
+    if should_respond:
+        BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5)
     
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
