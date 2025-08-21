@@ -89,7 +89,7 @@ class PhraseOperations(object):
         
         # Check for specific triggers that warrant a response
         for category, data in keywords.items():
-            if category in ['random_response_probability', 'time_based_cooldown_hours']:
+            if category in ['random_response_probability', 'time_based_cooldown_hours', 'response_phrases']:
                 continue
                 
             if any(word in message_text_lower for word in data['words']):
@@ -147,11 +147,11 @@ class PhraseOperations(object):
         # Check for positive sentiment
         elif any(word in reply_text_lower for word in keywords['positive_keywords']['words']):
             phrases = keywords['response_phrases'].get('positive', [])
-            return random.choice(phrases) if phrases else "Рад, что понравилось! 😊"
+            return random.choice(phrases) if phrases else "Охуенно! 😊"
         # Check for questions
         elif any(word in reply_text_lower for word in keywords['question_keywords']['words']):
             phrases = keywords['response_phrases'].get('question', [])
-            return random.choice(phrases) if phrases else "Хороший вопрос! 🤔"
+            return random.choice(phrases) if phrases else "А хуй его знает, чел.. 🤔"
         else:
             # Use weighted phrase selection for neutral replies
             return None  # This will be handled by calling random_phrase in main.py
