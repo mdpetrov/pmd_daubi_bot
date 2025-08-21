@@ -140,18 +140,41 @@ class PhraseOperations(object):
         keywords = self.load_response_keywords()
         reply_text_lower = reply_text.lower()
         
+        # Check for all response categories in order of priority
+        # Check for gaming-related keywords
+        if any(word in reply_text_lower for word in keywords['gaming_keywords']['words']):
+            return self.random_phrase(0)  # Use gaming phrases from main phrase database
+        
+        # Check for greeting keywords
+        elif any(word in reply_text_lower for word in keywords['greeting_keywords']['words']):
+            phrases = keywords['response_phrases'].get('greeting', [])
+            return random.choice(phrases) if phrases else "здорова 👋"
+        
+        # Check for question keywords
+        elif any(word in reply_text_lower for word in keywords['question_keywords']['words']):
+            phrases = keywords['response_phrases'].get('question', [])
+            return random.choice(phrases) if phrases else "А хуй его знает, чел.. 🤔"
+        
+        # Check for agreement keywords
+        elif any(word in reply_text_lower for word in keywords['agreement_keywords']['words']):
+            phrases = keywords['response_phrases'].get('agreement', [])
+            return random.choice(phrases) if phrases else "найс найс найс 👍"
+        
+        # Check for disagreement keywords
+        elif any(word in reply_text_lower for word in keywords['disagreement_keywords']['words']):
+            phrases = keywords['response_phrases'].get('disagreement', [])
+            return random.choice(phrases) if phrases else "да мне поебать"
+        
         # Check for negative sentiment
-        if any(word in reply_text_lower for word in keywords['negative_keywords']['words']):
+        elif any(word in reply_text_lower for word in keywords['negative_keywords']['words']):
             phrases = keywords['response_phrases'].get('negative', [])
             return random.choice(phrases) if phrases else "Без негатива же..."
+        
         # Check for positive sentiment
         elif any(word in reply_text_lower for word in keywords['positive_keywords']['words']):
             phrases = keywords['response_phrases'].get('positive', [])
             return random.choice(phrases) if phrases else "Охуенно! 😊"
-        # Check for questions
-        elif any(word in reply_text_lower for word in keywords['question_keywords']['words']):
-            phrases = keywords['response_phrases'].get('question', [])
-            return random.choice(phrases) if phrases else "А хуй его знает, чел.. 🤔"
+        
         else:
             # Use weighted phrase selection for neutral replies
             return None  # This will be handled by calling random_phrase in main.py
