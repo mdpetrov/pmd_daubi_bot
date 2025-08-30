@@ -51,35 +51,33 @@ class PhraseOperations(object):
         LO = self.LO
         LO.write_log(0, 'Trying to add a new phrase')
         phrases = self.load_phrases()
-        phrases = pd.DataFrame(phrases)
-        if phrase.lower() in [s.lower() for s in phrases['phrase'].tolist()]:
+        
+        # Check if phrase already exists (case-insensitive)
+        if phrase.lower() in [p['phrase'].lower() for p in phrases]:
             return 'Такая фраза уже есть'
         else:
-            # Add new phrase with proper column names for CSV format
+            # Add new phrase with proper structure for JSON format
             new_phrase = {
                 'phrase': phrase,
                 'weight': 10000,  # Set the current value very high
                 'default_weight': weight['base']  # Set the default value normal
             }
-            phrases = pd.concat([phrases, pd.DataFrame([new_phrase])], ignore_index=True)
-            self.save_phrases(phrases.to_dict(orient='records'))
+            phrases.append(new_phrase)
+            self.save_phrases(phrases)
             return 'Легчайшее добавление'
             
     def load_phrases(self):
         path = self.config.path
-        # Load phrases from CSV file instead of JSON
+        # Load phrases from JSON file
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
-            phrases_df = pd.read_csv(con, sep=';')
-        # Convert DataFrame to list of dictionaries for compatibility
-        phrases_list = phrases_df.to_dict(orient='records')
+            phrases_list = json.load(con)
         return phrases_list
     
     def save_phrases(self, phrases):
         path = self.config.path
-        # Convert list of dictionaries back to DataFrame and save as CSV
-        phrases_df = pd.DataFrame(phrases)
+        # Save phrases as JSON
         with open(path['text_phrases'], mode='wt', encoding='utf-8') as con:
-            phrases_df.to_csv(con, sep=';', index=False)
+            json.dump(phrases, con, indent=4, ensure_ascii=False)
     
     def load_response_keywords(self):
         """Load response keywords and their probabilities from JSON file"""
@@ -91,10 +89,10 @@ class PhraseOperations(object):
     def analyze_message_and_decide_response(self, message_text, chat_id, last_message_time):
         """
         Analyze message content and decide whether to respond and how
-        For regular messages (not replies), only respond with random phrase from text_phrases.csv with 5% chance
+        For regular messages (not replies), only respond with random phrase from text_phrases.json with 5% chance
         Returns: (should_respond, response_reason, response_phrase)
         """
-        # For regular messages, only respond with 5% chance using random phrase from text_phrases.csv
+        # For regular messages, only respond with 5% chance using random phrase from text_phrases.json
         if time.time() - last_message_time >= 60 * 60 * 5: # If 5 hours passed, respond
             should_respond = True
         elif random.random() <= 0.05: # 5% chance
@@ -188,6 +186,6 @@ class PhraseOperations(object):
             return None
         
         else:
-            # For neutral replies, use a random phrase from text_phrases.csv
+            # For neutral replies, use a random phrase from text_phrases.json
             # Since we already have 95% chance to respond, we'll use the phrase database
             return self.random_phrase(0)  # Use weighted phrase selection for neutral replies
