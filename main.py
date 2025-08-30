@@ -128,12 +128,15 @@ def get_message_group(message):
         if message.reply_to_message.from_user.username == 'daubi2_bot':
             # Use phrase operations to analyze reply and get response
             message_sent = PhO.analyze_reply_to_bot(message.text)
-            LO.write_log(chat_id=message.chat.id, text='Reply to a user')
+            LO.write_log(chat_id=message.chat.id, text='Reply to bot detected')
             if message_sent is not None:
-                LO.write_log(chat_id=message.chat.id, text='Reply to a user')
+                LO.write_log(chat_id=message.chat.id, text=f'Responding to reply: {message_sent}')
                 BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
                 responded = True
+            else:
+                LO.write_log(chat_id=message.chat.id, text='Ignoring reply (5% chance)')
 
+    # Handle regular messages (not replies)
     if not responded:
         # Use phrase operations to analyze message and decide response
         should_respond, response_reason, response_phrase = PhO.analyze_message_and_decide_response(
@@ -144,9 +147,10 @@ def get_message_group(message):
     
         # Log the decision
         rand_val = random.random()
-        LO.write_log(chat_id=message.chat.id, text=f': Random = {round(rand_val, 2)}, Should respond: {should_respond}, Reason: {response_reason}')
+        LO.write_log(chat_id=message.chat.id, text=f'Regular message - Random = {round(rand_val, 2)}, Should respond: {should_respond}, Reason: {response_reason}')
         
         if should_respond:
+            LO.write_log(chat_id=message.chat.id, text=f'Responding to regular message: {response_phrase}')
             BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5)
     
     local_params['last_time_message_received'] = time.time()

@@ -55,19 +55,31 @@ class PhraseOperations(object):
         if phrase.lower() in [s.lower() for s in phrases['phrase'].tolist()]:
             return 'Такая фраза уже есть'
         else:
-            phrases.loc[len(phrases)] = (phrase, 10000, weight['base']) # Set the current value very high but the default value normal
+            # Add new phrase with proper column names for CSV format
+            new_phrase = {
+                'phrase': phrase,
+                'weight': 10000,  # Set the current value very high
+                'default_weight': weight['base']  # Set the default value normal
+            }
+            phrases = pd.concat([phrases, pd.DataFrame([new_phrase])], ignore_index=True)
             self.save_phrases(phrases.to_dict(orient='records'))
             return 'Легчайшее добавление'
             
     def load_phrases(self):
         path = self.config.path
+        # Load phrases from CSV file instead of JSON
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
-            phrase_dict = json.load(con)
-        return phrase_dict
+            phrases_df = pd.read_csv(con, sep=';')
+        # Convert DataFrame to list of dictionaries for compatibility
+        phrases_list = phrases_df.to_dict(orient='records')
+        return phrases_list
+    
     def save_phrases(self, phrases):
         path = self.config.path
+        # Convert list of dictionaries back to DataFrame and save as CSV
+        phrases_df = pd.DataFrame(phrases)
         with open(path['text_phrases'], mode='wt', encoding='utf-8') as con:
-            json.dump(phrases, con, indent=4, ensure_ascii=False)
+            phrases_df.to_csv(con, sep=';', index=False)
     
     def load_response_keywords(self):
         """Load response keywords and their probabilities from JSON file"""
@@ -79,39 +91,16 @@ class PhraseOperations(object):
     def analyze_message_and_decide_response(self, message_text, chat_id, last_message_time):
         """
         Analyze message content and decide whether to respond and how
+        For regular messages (not replies), only respond with random phrase from text_phrases.csv with 5% chance
         Returns: (should_respond, response_reason, response_phrase)
         """
-        keywords = self.load_response_keywords()
-        message_text_lower = message_text.lower()
-        should_respond = False
-        response_reason = ""
+        # For regular messages, only respond with 5% chance using random phrase from text_phrases.csv
+        should_respond = random.random() <= 0.05  # 5% chance
+        response_reason = "random_message"
         response_phrase = ""
         
-        # Check for specific triggers that warrant a response
-        for category, data in keywords.items():
-            if category in ['random_response_probability', 'time_based_cooldown_hours', 'response_phrases']:
-                continue
-                
-            if any(word in message_text_lower for word in data['words']):
-                should_respond = random.random() <= data['probability']
-                response_reason = data['response_type']
-                break
-        
-        # If no specific keywords found, check random response probability
-        if not response_reason:
-            should_respond = random.random() <= keywords['random_response_probability']
-            response_reason = "random"
-        
-        # Time-based cooldown check
-        cooldown_config = keywords['time_based_cooldown_hours']
-        auto_send_cd_h = random.uniform(cooldown_config['min'], cooldown_config['max'])
-        if time.time() - last_message_time >= auto_send_cd_h * 3600:
-            should_respond = True
-            response_reason = "time_based"
-        
-        # Choose appropriate phrase based on context
         if should_respond:
-            response_phrase = self._get_contextual_phrase(response_reason, chat_id)
+            response_phrase = self.random_phrase(chat_id)
         
         return should_respond, response_reason, response_phrase
     
@@ -137,6 +126,10 @@ class PhraseOperations(object):
         Analyze reply to bot message and return appropriate response
         Returns: response_phrase or None if no response should be sent
         """
+        # First check if we should respond at all (95% chance to respond to replies)
+        if random.random() > 0.95:  # 5% chance to ignore
+            return None
+            
         keywords = self.load_response_keywords()
         reply_text_lower = reply_text.lower()
         
@@ -190,7 +183,6 @@ class PhraseOperations(object):
             return None
         
         else:
-            # For neutral replies, use a lower probability to avoid spam
-            # if random.random() <= keywords['random_response_probability']:
-            #     return self.random_phrase(0)  # Use weighted phrase selection for neutral replies
-            return None
+            # For neutral replies, use a random phrase from text_phrases.csv
+            # Since we already have 95% chance to respond, we'll use the phrase database
+            return self.random_phrase(0)  # Use weighted phrase selection for neutral replies
