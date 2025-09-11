@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import re
 import logging
+from datetime import datetime, timedelta
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -44,6 +45,15 @@ random.seed(datetime.datetime.now().timestamp())
 
     
     
+
+from pmd_daubi_bot.lfp_helpers import (
+    lfp_parse_time_and_quorum,
+    lfp_build_keyboard,
+    lfp_render_text,
+    lfp_update_vote,
+    lfp_prune_and_autoclose,
+    lfp_post_summary,
+)
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
@@ -120,6 +130,11 @@ def get_message_readycheck(message):
 
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
+    # Lazy auto-close expired LFP sessions on any group text
+    local_params = PO.load_params(message.chat.id)
+    lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
+    PO.save_params(message.chat.id, local_params)
+    # Reload to continue normal processing with freshest params
     local_params = PO.load_params(message.chat.id)
     responded = False
     
@@ -155,6 +170,102 @@ def get_message_group(message):
     
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
+
+@bot.message_handler(commands=['looking_for_play'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
+def get_message_lfp(message):
+    local_params = PO.load_params(message.chat.id)
+    lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
+    args_text = message.text.split(maxsplit=1)
+    args_text = args_text[1] if len(args_text) > 1 else ''
+    target_ts, time_str, quorum = lfp_parse_time_and_quorum(args_text, time.time(), config.param_value)
+    if target_ts is None:
+        BO.send_message(message.chat.id, text=config.param_value['lfp_usage_hint'], params=local_params)
+        PO.save_params(message.chat.id, local_params)
+        return
+
+    session = {
+        'session_id': '',
+        'chat_id': message.chat.id,
+        'message_id': 0,
+        'creator_id': message.from_user.id,
+        'time_str': time_str,
+        'time_ts': target_ts,
+        'quorum': quorum,
+        'created_ts': time.time(),
+        'closed': False,
+        'votes': {'yes':{}, 'no':{}, 'earlier':{}, 'later':{}}
+    }
+    text = lfp_render_text(session)
+    msg = BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML', reply_markup=lfp_build_keyboard(session, config.param_value))
+    session['message_id'] = msg.message_id
+    session['session_id'] = f"{message.chat.id}_{msg.message_id}"
+    # Rebuild keyboard with real session_id
+    bot.edit_message_reply_markup(chat_id=message.chat.id, message_id=msg.message_id, reply_markup=lfp_build_keyboard(session, config.param_value))
+    # Pin the vote message (may require admin rights)
+    bot.pin_chat_message(chat_id=message.chat.id, message_id=msg.message_id, disable_notification=True)
+    # Save session
+    if 'lfp_sessions' not in local_params:
+        local_params['lfp_sessions'] = {}
+    local_params['lfp_sessions'][session['session_id']] = session
+    PO.save_params(message.chat.id, local_params)
+
+@bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
+def handle_lfp_callback(call):
+    chat_id = call.message.chat.id
+    local_params = PO.load_params(chat_id)
+    lfp_prune_and_autoclose(bot, BO, PO, LO, chat_id, local_params, config.param_value)
+    data = call.data.split(':')
+    if len(data) != 3:
+        bot.answer_callback_query(call.id, 'Ошибка')
+        return
+    _, action, session_id = data
+    sessions = local_params.get('lfp_sessions', {})
+    session = sessions.get(session_id)
+    if not session:
+        bot.answer_callback_query(call.id, 'Сессия не найдена')
+        return
+    if session.get('closed'):
+        bot.answer_callback_query(call.id, 'Сессия закрыта')
+        return
+    # Auto-close if time passed
+    if session['time_ts'] <= time.time():
+        session['closed'] = True
+        sessions[session_id] = session
+        bot.edit_message_reply_markup(chat_id=chat_id, message_id=session['message_id'], reply_markup=None)
+        bot.unpin_chat_message(chat_id=chat_id, message_id=session['message_id'])
+        lfp_post_summary(BO, PO, LO, chat_id, session)
+        local_params['lfp_sessions'] = sessions
+        PO.save_params(chat_id, local_params)
+        bot.answer_callback_query(call.id, 'Сессия закрыта')
+        return
+
+    user_tag = lfp_update_vote(session, call.from_user)
+    if action == 'yes':
+        session['votes']['yes'][call.from_user.id] = user_tag
+        bot.answer_callback_query(call.id, 'Голос учтён')
+    elif action == 'no':
+        session['votes']['no'][call.from_user.id] = user_tag
+        bot.answer_callback_query(call.id, 'Голос учтён')
+    elif action == 'earlier':
+        session['votes']['earlier'][call.from_user.id] = user_tag
+        bot.answer_callback_query(call.id, 'Голос учтён')
+    elif action == 'later':
+        session['votes']['later'][call.from_user.id] = user_tag
+        bot.answer_callback_query(call.id, 'Голос учтён')
+    elif action == 'close':
+        session['closed'] = True
+        bot.edit_message_reply_markup(chat_id=chat_id, message_id=session['message_id'], reply_markup=None)
+        bot.unpin_chat_message(chat_id=chat_id, message_id=session['message_id'])
+        lfp_post_summary(BO, PO, LO, chat_id, session)
+        bot.answer_callback_query(call.id, 'Закрыто')
+    else:
+        bot.answer_callback_query(call.id, 'Неизвестное действие')
+    # Update rendered text
+    bot.edit_message_text(lfp_render_text(session), chat_id=chat_id, message_id=session['message_id'], parse_mode='HTML', reply_markup=lfp_build_keyboard(session, config.param_value) if not session['closed'] else None)
+    # Persist
+    sessions[session_id] = session
+    local_params['lfp_sessions'] = sessions
+    PO.save_params(chat_id, local_params)
         
 if __name__ == '__main__':
     LO.write_log(0, 'Start the bot')        
