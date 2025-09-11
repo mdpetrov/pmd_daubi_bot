@@ -126,50 +126,7 @@ def get_message_readycheck(message):
         # text = f'Объявите время гейминга! {" ".join(chat_members)}'
     BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML')
     PO.save_params(message.chat.id, local_params)
-
-@bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
-def get_message_group(message):
-    # Lazy auto-close expired LFP sessions on any group text
-    local_params = PO.load_params(message.chat.id)
-    lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
-    PO.save_params(message.chat.id, local_params)
-    # Reload to continue normal processing with freshest params
-    local_params = PO.load_params(message.chat.id)
-    responded = False
     
-    # Handle replies to bot messages
-    if message.reply_to_message:
-        if message.reply_to_message.from_user.username == 'daubi2_bot':
-            # Use phrase operations to analyze reply and get response
-            message_sent = PhO.analyze_reply_to_bot(message.text)
-            LO.write_log(chat_id=message.chat.id, text='Reply to bot detected')
-            if message_sent is not None:
-                LO.write_log(chat_id=message.chat.id, text=f'Responding to reply: {message_sent}')
-                BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
-                responded = True
-            else:
-                LO.write_log(chat_id=message.chat.id, text='Ignoring reply (5% chance)')
-
-    # Handle regular messages (not replies)
-    if not responded:
-        # Use phrase operations to analyze message and decide response
-        should_respond, response_reason, response_phrase = PhO.analyze_message_and_decide_response(
-        message.text, 
-        message.chat.id, 
-        local_params['last_time_message_received']
-        )   
-    
-        # Log the decision
-        rand_val = random.random()
-        LO.write_log(chat_id=message.chat.id, text=f'Regular message - Random = {round(rand_val, 2)}, Should respond: {should_respond}, Reason: {response_reason}')
-        
-        if should_respond:
-            LO.write_log(chat_id=message.chat.id, text=f'Responding to regular message: {response_phrase}')
-            BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5)
-    
-    local_params['last_time_message_received'] = time.time()
-    PO.save_params(message.chat.id, local_params)
-
 @bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_lfp(message):
     LO.write_log(chat_id=message.chat.id, text=f"LFP command received from user {message.from_user.id} ({getattr(message.from_user, 'username', None)})")
@@ -232,6 +189,50 @@ def get_message_lfp(message):
     LO.write_log(chat_id=message.chat.id, text=f"Saved LFP session to local_params under session_id={session['session_id']}")
     PO.save_params(message.chat.id, local_params)
     LO.write_log(chat_id=message.chat.id, text="Params saved after LFP session creation")
+
+@bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
+def get_message_group(message):
+    # Lazy auto-close expired LFP sessions on any group text
+    local_params = PO.load_params(message.chat.id)
+    lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
+    PO.save_params(message.chat.id, local_params)
+    # Reload to continue normal processing with freshest params
+    local_params = PO.load_params(message.chat.id)
+    responded = False
+    
+    # Handle replies to bot messages
+    if message.reply_to_message:
+        if message.reply_to_message.from_user.username == 'daubi2_bot':
+            # Use phrase operations to analyze reply and get response
+            message_sent = PhO.analyze_reply_to_bot(message.text)
+            LO.write_log(chat_id=message.chat.id, text='Reply to bot detected')
+            if message_sent is not None:
+                LO.write_log(chat_id=message.chat.id, text=f'Responding to reply: {message_sent}')
+                BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
+                responded = True
+            else:
+                LO.write_log(chat_id=message.chat.id, text='Ignoring reply (5% chance)')
+
+    # Handle regular messages (not replies)
+    if not responded:
+        # Use phrase operations to analyze message and decide response
+        should_respond, response_reason, response_phrase = PhO.analyze_message_and_decide_response(
+        message.text, 
+        message.chat.id, 
+        local_params['last_time_message_received']
+        )   
+    
+        # Log the decision
+        rand_val = random.random()
+        LO.write_log(chat_id=message.chat.id, text=f'Regular message - Random = {round(rand_val, 2)}, Should respond: {should_respond}, Reason: {response_reason}')
+        
+        if should_respond:
+            LO.write_log(chat_id=message.chat.id, text=f'Responding to regular message: {response_phrase}')
+            BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5)
+    
+    local_params['last_time_message_received'] = time.time()
+    PO.save_params(message.chat.id, local_params)
+
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
 def handle_lfp_callback(call):
     chat_id = call.message.chat.id
