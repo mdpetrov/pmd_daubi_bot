@@ -2,7 +2,6 @@ import telebot
 from telebot import types 
 from telebot.util import quick_markup
 import random
-import datetime
 import time
 import json
 import os
@@ -41,7 +40,7 @@ logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
     # raise OSError('text_phrases not found')
 
 
-random.seed(datetime.datetime.now().timestamp())
+random.seed(datetime.now().timestamp())
 
     
     
