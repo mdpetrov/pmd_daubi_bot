@@ -170,14 +170,20 @@ def get_message_group(message):
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
 
-@bot.message_handler(commands=['looking_for_play'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
+@bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_lfp(message):
+    LO.write_log(chat_id=message.chat.id, text=f"LFP command received from user {message.from_user.id} ({getattr(message.from_user, 'username', None)})")
     local_params = PO.load_params(message.chat.id)
+    LO.write_log(chat_id=message.chat.id, text="Loaded local_params for LFP")
     lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
+    LO.write_log(chat_id=message.chat.id, text="Pruned and autoclosing expired LFP sessions if any")
     args_text = message.text.split(maxsplit=1)
     args_text = args_text[1] if len(args_text) > 1 else ''
+    LO.write_log(chat_id=message.chat.id, text=f"Parsed args_text for LFP: '{args_text}'")
     target_ts, time_str, quorum = lfp_parse_time_and_quorum(args_text, time.time(), config.param_value)
+    LO.write_log(chat_id=message.chat.id, text=f"lfp_parse_time_and_quorum result: target_ts={target_ts}, time_str={time_str}, quorum={quorum}")
     if target_ts is None:
+        LO.write_log(chat_id=message.chat.id, text="LFP time parsing failed, sending usage hint")
         BO.send_message(message.chat.id, text=config.param_value['lfp_usage_hint'], params=local_params)
         PO.save_params(message.chat.id, local_params)
         return
@@ -194,20 +200,38 @@ def get_message_lfp(message):
         'closed': False,
         'votes': {'yes':{}, 'no':{}, 'earlier':{}, 'later':{}}
     }
+    LO.write_log(chat_id=message.chat.id, text=f"Created new LFP session: {session}")
     text = lfp_render_text(session)
-    msg = BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML', reply_markup=lfp_build_keyboard(session, config.param_value))
+    msg = BO.send_message(
+        message.chat.id,
+        text=text,
+        params=local_params,
+        parse_mode='HTML',
+        reply_markup=lfp_build_keyboard(session, config.param_value)
+    )
+    LO.write_log(chat_id=message.chat.id, text=f"LFP message sent, message_id={msg.message_id}")
     session['message_id'] = msg.message_id
     session['session_id'] = f"{message.chat.id}_{msg.message_id}"
     # Rebuild keyboard with real session_id
-    bot.edit_message_reply_markup(chat_id=message.chat.id, message_id=msg.message_id, reply_markup=lfp_build_keyboard(session, config.param_value))
+    bot.edit_message_reply_markup(
+        chat_id=message.chat.id,
+        message_id=msg.message_id,
+        reply_markup=lfp_build_keyboard(session, config.param_value)
+    )
+    LO.write_log(chat_id=message.chat.id, text=f"Edited message reply markup for LFP session_id={session['session_id']}")
     # Pin the vote message (may require admin rights)
-    bot.pin_chat_message(chat_id=message.chat.id, message_id=msg.message_id, disable_notification=True)
+    try:
+        bot.pin_chat_message(chat_id=message.chat.id, message_id=msg.message_id, disable_notification=True)
+        LO.write_log(chat_id=message.chat.id, text=f"Pinned LFP message_id={msg.message_id}")
+    except Exception as e:
+        LO.write_log(chat_id=message.chat.id, text=f"Failed to pin LFP message: {e}")
     # Save session
     if 'lfp_sessions' not in local_params:
         local_params['lfp_sessions'] = {}
     local_params['lfp_sessions'][session['session_id']] = session
+    LO.write_log(chat_id=message.chat.id, text=f"Saved LFP session to local_params under session_id={session['session_id']}")
     PO.save_params(message.chat.id, local_params)
-
+    LO.write_log(chat_id=message.chat.id, text="Params saved after LFP session creation")
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
 def handle_lfp_callback(call):
     chat_id = call.message.chat.id
