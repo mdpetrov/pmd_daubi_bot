@@ -69,7 +69,7 @@ def get_message_start(message):
     BO.send_message(message.chat.id, text=start_text, params=local_params)
     PO.save_params(message.chat.id, local_params)
 
-@bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
+#@bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_add_phrase(message):
     local_params = PO.load_params(message.chat.id)
     BO.send_message(message.chat.id, text='''Ты можешь добавить новую фразу в генератор ответов. 
