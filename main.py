@@ -56,6 +56,8 @@ from pmd_daubi_bot.lfp_helpers import (
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
+    # Track user in chat
+    PO.update_user_chat(message.from_user.id, message.chat.id)
     local_params = PO.load_params(message.chat.id)
     # BO.send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
     start_text = '''ДАУБИ БОТ 
@@ -93,15 +95,24 @@ def add_phrase(message, phrase):
         elif answer.lower() in ['нет']:
             BO.send_message(message.chat.id, text=f'Нет, так нет.', params=local_params)
         elif answer.lower() in ['да']:
-            BO.send_message(message.chat.id, text=f'ПОЕХАЛИ', params=local_params)
-            result = PhO.add_phrase(phrase=phrase)
-            BO.send_message(message.chat.id, text=result, params=local_params)
+            # Get user's group chats - phrases can only be added to group/supergroup chats
+            user_group_chats = PO.get_user_group_chats(message.from_user.id)
+            if not user_group_chats:
+                BO.send_message(message.chat.id, text='Ошибка: ты не состоишь ни в одной группе, где работает бот. Фразы можно добавлять только в групповые чаты.', params=local_params)
+            else:
+                # For now, use the first group chat. Later we'll add functionality to choose.
+                target_chat_id = user_group_chats[0]
+                BO.send_message(message.chat.id, text=f'ПОЕХАЛИ', params=local_params)
+                result = PhO.add_phrase(phrase=phrase, chat_id=target_chat_id)
+                BO.send_message(message.chat.id, text=result, params=local_params)
         else:
             raise ValueError('Cannot understand users answer')
     PO.save_params(message.chat.id, local_params)
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
+    # Track user in chat
+    PO.update_user_chat(message.from_user.id, message.chat.id)
     local_params = PO.load_params(message.chat.id)
     readycheck_cd = config.param_value['readycheck_cd']
     
@@ -129,6 +140,8 @@ def get_message_readycheck(message):
     
 @bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_lfp(message):
+    # Track user in chat
+    PO.update_user_chat(message.from_user.id, message.chat.id)
     LO.write_log(chat_id=message.chat.id, text=f"LFP command received from user {message.from_user.id} ({getattr(message.from_user, 'username', None)})")
     local_params = PO.load_params(message.chat.id)
     LO.write_log(chat_id=message.chat.id, text="Loaded local_params for LFP")
@@ -192,6 +205,8 @@ def get_message_lfp(message):
 
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
+    # Track user in chat
+    PO.update_user_chat(message.from_user.id, message.chat.id)
     # Lazy auto-close expired LFP sessions on any group text
     local_params = PO.load_params(message.chat.id)
     lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
@@ -204,7 +219,7 @@ def get_message_group(message):
     if message.reply_to_message:
         if message.reply_to_message.from_user.username == 'daubi2_bot':
             # Use phrase operations to analyze reply and get response
-            message_sent = PhO.analyze_reply_to_bot(message.text)
+            message_sent = PhO.analyze_reply_to_bot(message.text, chat_id=message.chat.id)
             LO.write_log(chat_id=message.chat.id, text='Reply to bot detected')
             if message_sent is not None:
                 LO.write_log(chat_id=message.chat.id, text=f'Responding to reply: {message_sent}')
@@ -235,6 +250,8 @@ def get_message_group(message):
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
 def handle_lfp_callback(call):
+    # Track user in chat
+    PO.update_user_chat(call.from_user.id, call.message.chat.id)
     chat_id = call.message.chat.id
     local_params = PO.load_params(chat_id)
     lfp_prune_and_autoclose(bot, BO, PO, LO, chat_id, local_params, config.param_value)

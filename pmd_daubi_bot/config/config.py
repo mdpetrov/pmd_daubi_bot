@@ -1,4 +1,4 @@
-path = {"text_phrases": "./.secret/input/text_phrases.json", 
+path = {"text_phrases": "./.secret/input/text_phrases/text_phrases.json", 
         "token": "./.secret/token/.token", 
         "log_dir": "./.secret/log", 
         "data_dir": "./.secret/data",

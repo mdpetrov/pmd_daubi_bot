@@ -2,6 +2,8 @@ import pandas as pd
 import json
 import random
 import time
+from os.path import join, dirname, isfile
+from os import makedirs
 from pmd_daubi_bot.log_operation import LogOperations
 
 
@@ -11,11 +13,21 @@ class PhraseOperations(object):
         self.LO = LogOperations(config)
 
     def random_phrase(self, chat_id):
+        """
+        Get a random phrase for a chat. If chat_id is None, uses default phrases (read-only).
+        For group chats, uses chat-specific phrases.
+        """
         path = self.config.path
         weight = self.config.weight
         LO = self.LO
-        LO.write_log(chat_id, ': Load phrases')
-        phrases = self.load_phrases()
+        LO.write_log(chat_id if chat_id else 0, ': Load phrases')
+        phrases = self.load_phrases(chat_id)
+        
+        # Handle empty phrase list
+        if not phrases:
+            LO.write_log(chat_id if chat_id else 0, 'Phrase list is empty')
+            return "Нет фраз"
+        
         phrases = pd.DataFrame(phrases)
             
         selected_phrase_df = phrases['phrase'].sample(n=1, weights=phrases['weight'])
@@ -25,7 +37,9 @@ class PhraseOperations(object):
         phrases.loc[vec_to_decrease, 'weight'] = phrases.loc[vec_to_decrease, 'default_weight'] # Set default weight to selected phrase
         phrases.loc[vec_to_increase, 'weight'] = phrases.loc[vec_to_increase, 'weight'] + weight['increase'] # Increase weight to not selected phrases
         
-        self.save_phrases(phrases.to_dict(orient='records'))
+        # Only save if chat_id is provided (group chat) - never save changes to default
+        if chat_id is not None:
+            self.save_phrases(chat_id, phrases.to_dict(orient='records'))
         
         phrase = selected_phrase_df.tolist()[0]
         return phrase
@@ -45,12 +59,19 @@ class PhraseOperations(object):
         LO.write_log(chat_id, f'{phrase}')
         return phrase
         
-    def add_phrase(self, phrase):
-        path = self.config.path
+    def add_phrase(self, phrase, chat_id):
+        """
+        Add a phrase to a group chat's phrase list.
+        chat_id is REQUIRED - phrases can only be added to group/supergroup chats.
+        """
+        if chat_id is None:
+            raise ValueError("chat_id is required. Phrases can only be added to group/supergroup chats.")
+        
         weight = self.config.weight
         LO = self.LO
-        LO.write_log(0, 'Trying to add a new phrase')
-        phrases = self.load_phrases()
+        LO.write_log(chat_id, f'Trying to add a new phrase to chat {chat_id}')
+        # Load phrases for this specific chat
+        phrases = self.load_phrases(chat_id)
         
         # Check if phrase already exists (case-insensitive)
         if phrase.lower() in [p['phrase'].lower() for p in phrases]:
@@ -59,24 +80,66 @@ class PhraseOperations(object):
             # Add new phrase with proper structure for JSON format
             new_phrase = {
                 'phrase': phrase,
-                'weight': 10000,  # Set the current value very high
+                'weight': 1000000,  # Set the current value very high
                 'default_weight': weight['base']  # Set the default value normal
             }
             phrases.append(new_phrase)
-            self.save_phrases(phrases)
+            # Save to chat-specific file (will create if doesn't exist)
+            self.save_phrases(chat_id, phrases)
             return 'Легчайшее добавление'
             
-    def load_phrases(self):
+    def load_phrases(self, chat_id=None):
+        """
+        Load phrases for a chat. If chat_id is provided and chat-specific file exists, load it.
+        Otherwise, load default phrases (for new chats). Default file is read-only (cannot be saved to).
+        """
         path = self.config.path
-        # Load phrases from JSON file
+        # If chat_id is provided, try to load chat-specific file
+        if chat_id is not None:
+            # Build chat-specific path using the same directory as the default text_phrases file
+            default_dir = dirname(path['text_phrases'])
+            # Ensure directory exists (might be first time creating it)
+            makedirs(default_dir, exist_ok=True)
+            chat_specific_filename = f"{chat_id}.json"
+            chat_specific_path = join(default_dir, chat_specific_filename)
+            if isfile(chat_specific_path):
+                # Load chat-specific phrases
+                with open(chat_specific_path, mode='rt', encoding='utf-8') as con:
+                    phrases_list = json.load(con)
+                return phrases_list
+        
+        # Load default phrases file (fallback for new chats or when chat_id is None)
+        # Ensure directory exists before trying to read
+        default_dir = dirname(path['text_phrases'])
+        makedirs(default_dir, exist_ok=True)
+        
+        # If default file doesn't exist, create it with empty list
+        if not isfile(path['text_phrases']):
+            with open(path['text_phrases'], mode='wt', encoding='utf-8') as con:
+                json.dump([], con, indent=4, ensure_ascii=False)
+            return []
+        
         with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
             phrases_list = json.load(con)
         return phrases_list
     
-    def save_phrases(self, phrases):
+    def save_phrases(self, chat_id, phrases):
+        """
+        Save phrases to chat-specific file. 
+        chat_id is REQUIRED - this method only saves to group chat files, never to default.
+        """
+        if chat_id is None:
+            raise ValueError("chat_id is required. Cannot save to default phrase list - it is protected.")
+        
         path = self.config.path
-        # Save phrases as JSON
-        with open(path['text_phrases'], mode='wt', encoding='utf-8') as con:
+        # Build chat-specific path using the same directory as the default text_phrases file
+        default_dir = dirname(path['text_phrases'])
+        chat_specific_filename = f"{chat_id}.json"
+        chat_specific_path = join(default_dir, chat_specific_filename)
+        # Ensure directory exists
+        makedirs(default_dir, exist_ok=True)
+        # Save phrases as JSON to chat-specific file
+        with open(chat_specific_path, mode='wt', encoding='utf-8') as con:
             json.dump(phrases, con, indent=4, ensure_ascii=False)
     
     def load_response_keywords(self):
@@ -124,7 +187,7 @@ class PhraseOperations(object):
         else:
             return self.random_phrase(chat_id)
     
-    def analyze_reply_to_bot(self, reply_text):
+    def analyze_reply_to_bot(self, reply_text, chat_id=None):
         """
         Analyze reply to bot message and return appropriate response
         Returns: response_phrase or None if no response should be sent
@@ -140,7 +203,7 @@ class PhraseOperations(object):
         # Check for gaming-related keywords
         if any(word in reply_text_lower for word in keywords['gaming_keywords']['words']):
             if random.random() <= keywords['gaming_keywords']['probability']:
-                return self.random_phrase(0)  # Use gaming phrases from main phrase database
+                return self.random_phrase(chat_id)  # Use gaming phrases from chat-specific or default phrase database
             return None
         
         # Check for greeting keywords
@@ -188,4 +251,4 @@ class PhraseOperations(object):
         else:
             # For neutral replies, use a random phrase from text_phrases.json
             # Since we already have 95% chance to respond, we'll use the phrase database
-            return self.random_phrase(0)  # Use weighted phrase selection for neutral replies
+            return self.random_phrase(chat_id)  # Use weighted phrase selection for neutral replies (chat-specific or default phrases)
