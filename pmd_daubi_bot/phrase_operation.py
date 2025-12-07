@@ -88,40 +88,36 @@ class PhraseOperations(object):
             self.save_phrases(chat_id, phrases)
             return 'Легчайшее добавление'
             
-    def load_phrases(self, chat_id=None):
+    def load_phrases(self, chat_id):
         """
         Load phrases for a chat. If chat_id is provided and chat-specific file exists, load it.
         Otherwise, load default phrases (for new chats). Default file is read-only (cannot be saved to).
         """
+        if chat_id is None:
+            raise ValueError("chat_id is required. Phrases can only be loaded from group chat files.")
         path = self.config.path
-        # If chat_id is provided, try to load chat-specific file
-        if chat_id is not None:
-            # Build chat-specific path using the same directory as the default text_phrases file
-            default_dir = dirname(path['text_phrases'])
-            # Ensure directory exists (might be first time creating it)
-            makedirs(default_dir, exist_ok=True)
-            chat_specific_filename = f"{chat_id}.json"
-            chat_specific_path = join(default_dir, chat_specific_filename)
-            if isfile(chat_specific_path):
-                # Load chat-specific phrases
-                with open(chat_specific_path, mode='rt', encoding='utf-8') as con:
-                    phrases_list = json.load(con)
-                return phrases_list
-        
-        # Load default phrases file (fallback for new chats or when chat_id is None)
-        # Ensure directory exists before trying to read
+        # Build chat-specific path using the same directory as the default text_phrases file
         default_dir = dirname(path['text_phrases'])
+        # Ensure directory exists (might be first time creating it)
         makedirs(default_dir, exist_ok=True)
-        
-        # If default file doesn't exist, create it with empty list
-        if not isfile(path['text_phrases']):
+        chat_specific_filename = f"{chat_id}.json"
+        chat_specific_path = join(default_dir, chat_specific_filename)
+        if isfile(chat_specific_path):
+            # Load chat-specific phrases
+            with open(chat_specific_path, mode='rt', encoding='utf-8') as con:
+                phrases_list = json.load(con)
+            return phrases_list
+       
+        # Load default phrases file (fallback for new chats or when chat_id is None)
+        if isfile(path['text_phrases']):
+            with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
+                phrases_list = json.load(con)
+            self.save_phrases(chat_id, phrases_list)
+            return phrases_list
+        else:
             with open(path['text_phrases'], mode='wt', encoding='utf-8') as con:
-                json.dump([], con, indent=4, ensure_ascii=False)
-            return []
+                json.dump({}, con, indent=4, ensure_ascii=False)
         
-        with open(path['text_phrases'], mode='rt', encoding='utf-8') as con:
-            phrases_list = json.load(con)
-        return phrases_list
     
     def save_phrases(self, chat_id, phrases):
         """
