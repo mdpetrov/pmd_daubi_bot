@@ -159,7 +159,7 @@ class PhraseOperations(object):
         else:
             should_respond = False
         response_reason = "random_message"
-        response_phrase = ""
+        response_phrase = "ДАУБИ"
         
         if should_respond:
             response_phrase = self.random_phrase(chat_id)
