@@ -11,8 +11,6 @@ import re
 import logging
 from datetime import datetime, timedelta
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
 # Custom packages
 
 from pmd_daubi_bot.config import config
@@ -20,6 +18,17 @@ from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
 from pmd_daubi_bot.phrase_operation import PhraseOperations
+
+from pmd_daubi_bot.lfp_helpers import (
+    lfp_parse_time_and_quorum,
+    lfp_build_keyboard,
+    lfp_render_text,
+    lfp_update_vote,
+    lfp_prune_and_autoclose,
+    lfp_post_summary,
+)
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 path = config.path
 # Open bot
@@ -36,30 +45,14 @@ PhO = PhraseOperations(config=config)
 LOG_FILENAME = '.secret/log/0.log'
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
-# if not os.path.isfile(path['text_phrases']):
-    # raise OSError('text_phrases not found')
-
 
 random.seed(datetime.now().timestamp())
 
-    
-    
-
-from pmd_daubi_bot.lfp_helpers import (
-    lfp_parse_time_and_quorum,
-    lfp_build_keyboard,
-    lfp_render_text,
-    lfp_update_vote,
-    lfp_prune_and_autoclose,
-    lfp_post_summary,
-)
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id)
     local_params = PO.load_params(message.chat.id)
-    # BO.send_message(message.chat.id, text='ДАУБИ БОТ', params=local_params)
     start_text = '''ДАУБИ БОТ 
 Список команд:
     /start - вывести стартовое сообщение
@@ -69,40 +62,46 @@ def get_message_start(message):
     BO.send_message(message.chat.id, text=start_text, params=local_params)
     PO.save_params(message.chat.id, local_params)
 
-#@bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
+@bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_add_phrase(message):
     local_params = PO.load_params(message.chat.id)
+    user_group_chats = PO.get_user_group_chats(message.from_user.id)
+    if not user_group_chats:
+        BO.send_message(message.chat.id, text='Ошибка: ты не состоишь ни в одной группе, где работает бот. Фразы можно добавлять только в групповые чаты.', params=local_params)
+        return
     BO.send_message(message.chat.id, text='''Ты можешь добавить новую фразу в генератор ответов. 
-Фразы добавляются анонимно. 
-Введи фразу:''', params=local_params)
-    bot.register_next_step_handler(message, check_phrase)
+Фразы добавляются анонимно.''', params=local_params)
+    markup = telebot.types.InlineKeyboardMarkup()
+    for chat_id in user_group_chats:
+        callback_data = f"phrase_chat:{chat_id}"
+        markup.add(telebot.types.InlineKeyboardButton(text=str(chat_id), callback_data=callback_data))
+    BO.send_message(message.chat.id, text='Выбери группу для добавления фразы:', params=local_params, reply_markup=markup)
+    
     PO.save_params(message.chat.id, local_params)
 
-def check_phrase(message):
+def check_phrase(message, target_chat_id):
     local_params = PO.load_params(message.chat.id)
     if message.text:
         phrase = message.text
         BO.send_message(message.chat.id, text=f'Добавить фразу? (Да/Нет): "{phrase}"', params=local_params)
-        bot.register_next_step_handler(message, add_phrase, phrase=phrase)
+        bot.register_next_step_handler(message, add_phrase, phrase=phrase, target_chat_id=target_chat_id)
         PO.save_params(message.chat.id, local_params)
 
-def add_phrase(message, phrase):
+def add_phrase(message, phrase, target_chat_id):
     local_params = PO.load_params(message.chat.id)
     if message.text:
         answer = message.text.strip()
         if answer.lower() not in ['да', 'нет']:
-            BO.send_message(message.chat.id, text=f'Я не понял твой ответ. Начни заново.', params=local_params)
+            BO.send_message(message.chat.id, text='Я не понял твой ответ. Начни заново.', params=local_params)
         elif answer.lower() in ['нет']:
-            BO.send_message(message.chat.id, text=f'Нет, так нет.', params=local_params)
+            BO.send_message(message.chat.id, text='Нет, так нет.', params=local_params)
         elif answer.lower() in ['да']:
-            # Get user's group chats - phrases can only be added to group/supergroup chats
+            # Verify user still has access to the selected chat
             user_group_chats = PO.get_user_group_chats(message.from_user.id)
-            if not user_group_chats:
-                BO.send_message(message.chat.id, text='Ошибка: ты не состоишь ни в одной группе, где работает бот. Фразы можно добавлять только в групповые чаты.', params=local_params)
+            if not user_group_chats or target_chat_id not in user_group_chats:
+                BO.send_message(message.chat.id, text='Ошибка: ты не состоишь в выбранной группе, где работает бот. Фразы можно добавлять только в групповые чаты.', params=local_params)
             else:
-                # For now, use the first group chat. Later we'll add functionality to choose.
-                target_chat_id = user_group_chats[0]
-                BO.send_message(message.chat.id, text=f'ПОЕХАЛИ', params=local_params)
+                BO.send_message(message.chat.id, text='ПОЕХАЛИ', params=local_params)
                 result = PhO.add_phrase(phrase=phrase, chat_id=target_chat_id)
                 BO.send_message(message.chat.id, text=result, params=local_params)
         else:
@@ -247,6 +246,38 @@ def get_message_group(message):
     
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
+
+@bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('phrase_chat:'))
+def handle_phrase_chat_selection(call):
+    """Handle chat selection callback when adding a phrase"""
+    # Track user in chat
+    chat_id = call.message.chat.id
+    local_params = PO.load_params(chat_id)
+    
+    # Parse callback data: phrase_chat:<target_chat_id>
+    data = call.data.split(':')
+    if len(data) != 2:
+        bot.answer_callback_query(call.id, 'Техническая ошибка')
+        return
+    
+    target_chat_id = int(data[1])
+    
+    # Verify user has access to this chat
+    user_group_chats = PO.get_user_group_chats(call.from_user.id)
+    if not user_group_chats or target_chat_id not in user_group_chats:
+        bot.answer_callback_query(call.id, 'Ошибка: нет доступа к этой группе')
+        return
+    
+    # Answer the callback query
+    bot.answer_callback_query(call.id, f'Выбрана группа: {target_chat_id}')
+    
+    # Edit the message to show selection
+    bot.delete_message(chat_id=chat_id, message_id=call.message.message_id)
+    
+    # Request phrase input
+    BO.send_message(chat_id, text='Введи фразу для добавления:', params=local_params)
+    bot.register_next_step_handler(call.message, check_phrase, target_chat_id=target_chat_id)
+    PO.save_params(chat_id, local_params)
 
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
 def handle_lfp_callback(call):

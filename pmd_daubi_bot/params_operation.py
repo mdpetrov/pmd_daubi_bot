@@ -104,4 +104,4 @@ class ParamsOperations(object):
         Returns list of chat_ids (all are assumed to be group/supergroup chats).
         '''
         user_params = self.load_user_params(user_id)
-        return user_params.get('chat_ids', [])
+        return user_params.get('chat_ids', None)
