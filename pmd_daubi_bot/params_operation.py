@@ -67,11 +67,26 @@ class ParamsOperations(object):
                                     Debug info:
                                     \tUser id: {user_id}'''
                 raise TypeError(error_text)
-            # Ensure chat_ids list exists
-            if 'chat_ids' not in user_params:
-                user_params['chat_ids'] = []
+            # Migrate old format (chat_ids + chat_names) to new format (chats dict)
+            if 'chat_ids' in user_params or 'chat_names' in user_params:
+                chats = {}
+                # Get existing chat_ids
+                chat_ids = user_params.get('chat_ids', [])
+                chat_names = user_params.get('chat_names', {})
+                # Merge into new format
+                for cid in chat_ids:
+                    # Convert chat_id to int if it's in the list
+                    cid_int = int(cid) if isinstance(cid, (str, int)) else cid
+                    chats[cid_int] = chat_names.get(cid_int, chat_names.get(str(cid_int), str(cid_int)))
+                user_params['chats'] = chats
+                # Remove old keys
+                user_params.pop('chat_ids', None)
+                user_params.pop('chat_names', None)
+            # Ensure chats dict exists
+            if 'chats' not in user_params:
+                user_params['chats'] = {}
         else:
-            user_params = {'chat_ids': []}
+            user_params = {'chats': {}}
         return user_params
     
     def save_user_params(self, user_id, user_params):
@@ -89,14 +104,28 @@ class ParamsOperations(object):
         with open(param_path, 'w') as fp:
             json.dump(user_params, fp)
     
-    def update_user_chat(self, user_id, chat_id):
-        '''Update user's chat_ids list to include the given chat_id if not already present'''
+    def update_user_chat(self, user_id, chat_id, bot=None):
+        '''Update user's chats dictionary to include the given chat_id. Stores chat name if bot is provided or if not already stored.'''
         user_params = self.load_user_params(user_id)
-        if 'chat_ids' not in user_params:
-            user_params['chat_ids'] = []
-        if chat_id not in user_params['chat_ids']:
-            user_params['chat_ids'].append(chat_id)
-            self.save_user_params(user_id, user_params)
+        if 'chats' not in user_params:
+            user_params['chats'] = {}
+        
+        # Get and store chat name if not already stored or if bot is provided (to update existing)
+        if chat_id not in user_params['chats'] or bot is not None:
+            if bot is not None:
+                try:
+                    chat_info = bot.get_chat(chat_id)
+                    chat_name = getattr(chat_info, 'title', None) or getattr(chat_info, 'first_name', None) or str(chat_id)
+                    user_params['chats'][chat_id] = chat_name
+                except Exception:
+                    # If we can't get chat info and name not stored, use chat_id as name
+                    if chat_id not in user_params['chats']:
+                        user_params['chats'][chat_id] = str(chat_id)
+            else:
+                # If bot not provided and chat not in dict, use chat_id as name
+                user_params['chats'][chat_id] = str(chat_id)
+        
+        self.save_user_params(user_id, user_params)
     
     def get_user_group_chats(self, user_id):
         '''
@@ -104,4 +133,5 @@ class ParamsOperations(object):
         Returns list of chat_ids (all are assumed to be group/supergroup chats).
         '''
         user_params = self.load_user_params(user_id)
-        return user_params.get('chat_ids', None)
+        chats = user_params.get('chats', {})
+        return chats if chats else None

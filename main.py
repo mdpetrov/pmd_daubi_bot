@@ -72,9 +72,9 @@ def get_message_add_phrase(message):
     BO.send_message(message.chat.id, text='''Ты можешь добавить новую фразу в генератор ответов. 
 Фразы добавляются анонимно.''', params=local_params)
     markup = telebot.types.InlineKeyboardMarkup()
-    for chat_id in user_group_chats:
+    for chat_id, chat_name in user_group_chats.items():
         callback_data = f"phrase_chat:{chat_id}"
-        markup.add(telebot.types.InlineKeyboardButton(text=str(chat_id), callback_data=callback_data))
+        markup.add(telebot.types.InlineKeyboardButton(text=str(chat_name), callback_data=callback_data))
     BO.send_message(message.chat.id, text='Выбери группу для добавления фразы:', params=local_params, reply_markup=markup)
     
     PO.save_params(message.chat.id, local_params)
@@ -111,7 +111,7 @@ def add_phrase(message, phrase, target_chat_id):
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id)
+    PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
     local_params = PO.load_params(message.chat.id)
     readycheck_cd = config.param_value['readycheck_cd']
     
@@ -120,12 +120,14 @@ def get_message_readycheck(message):
     LO.write_log(message.chat.id, local_params)
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
-    if time_remain > 0:
+    if time_remain >= 60:
         text = f'Ready Check Cooldown: {int(time_remain / 60)} min'
+    elif time_remain > 0:
+        text = f'Ready Check Cooldown: {int(time_remain)} sec'
     else:
         chat_members = []
         for member in bot.get_chat_administrators(message.chat.id):
-            if member.user.is_bot == False:
+            if not member.user.is_bot:
                 if member.user.username:
                     chat_members.append(f'@{member.user.username}')
                 else:
@@ -140,7 +142,7 @@ def get_message_readycheck(message):
 @bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_lfp(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id)
+    PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
     LO.write_log(chat_id=message.chat.id, text=f"LFP command received from user {message.from_user.id} ({getattr(message.from_user, 'username', None)})")
     local_params = PO.load_params(message.chat.id)
     LO.write_log(chat_id=message.chat.id, text="Loaded local_params for LFP")
@@ -205,7 +207,7 @@ def get_message_lfp(message):
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id)
+    PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
     # Lazy auto-close expired LFP sessions on any group text
     local_params = PO.load_params(message.chat.id)
     lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
@@ -282,7 +284,7 @@ def handle_phrase_chat_selection(call):
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
 def handle_lfp_callback(call):
     # Track user in chat
-    PO.update_user_chat(call.from_user.id, call.message.chat.id)
+    PO.update_user_chat(call.from_user.id, call.message.chat.id, bot=bot)
     chat_id = call.message.chat.id
     local_params = PO.load_params(chat_id)
     lfp_prune_and_autoclose(bot, BO, PO, LO, chat_id, local_params, config.param_value)
