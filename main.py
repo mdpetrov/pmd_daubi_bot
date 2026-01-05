@@ -1,15 +1,10 @@
 import telebot
-from telebot import types 
-from telebot.util import quick_markup
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import random
 import time
-import json
 import os
-import numpy as np
-import pandas as pd
-import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Custom packages
 
@@ -71,10 +66,10 @@ def get_message_add_phrase(message):
         return
     BO.send_message(message.chat.id, text='''Ты можешь добавить новую фразу в генератор ответов. 
 Фразы добавляются анонимно.''', params=local_params)
-    markup = telebot.types.InlineKeyboardMarkup()
+    markup = InlineKeyboardMarkup()
     for chat_id, chat_name in user_group_chats.items():
         callback_data = f"phrase_chat:{chat_id}"
-        markup.add(telebot.types.InlineKeyboardButton(text=str(chat_name), callback_data=callback_data))
+        markup.add(InlineKeyboardButton(text=str(chat_name), callback_data=callback_data))
     BO.send_message(message.chat.id, text='Выбери группу для добавления фразы:', params=local_params, reply_markup=markup)
     
     PO.save_params(message.chat.id, local_params)
@@ -111,7 +106,7 @@ def add_phrase(message, phrase, target_chat_id):
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
+    PO.update_user_chat(message.from_user.id, message.chat)
     local_params = PO.load_params(message.chat.id)
     readycheck_cd = config.param_value['readycheck_cd']
     
@@ -142,7 +137,7 @@ def get_message_readycheck(message):
 @bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_lfp(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
+    PO.update_user_chat(message.from_user.id, message.chat)
     LO.write_log(chat_id=message.chat.id, text=f"LFP command received from user {message.from_user.id} ({getattr(message.from_user, 'username', None)})")
     local_params = PO.load_params(message.chat.id)
     LO.write_log(chat_id=message.chat.id, text="Loaded local_params for LFP")
@@ -207,7 +202,7 @@ def get_message_lfp(message):
 @bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_group(message):
     # Track user in chat
-    PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
+    PO.update_user_chat(message.from_user.id, message.chat)
     # Lazy auto-close expired LFP sessions on any group text
     local_params = PO.load_params(message.chat.id)
     lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
@@ -262,11 +257,12 @@ def handle_phrase_chat_selection(call):
         bot.answer_callback_query(call.id, 'Техническая ошибка')
         return
     
-    target_chat_id = int(data[1])
+    target_chat_id = data[1]
     
     # Verify user has access to this chat
     user_group_chats = PO.get_user_group_chats(call.from_user.id)
     if not user_group_chats or target_chat_id not in user_group_chats:
+        LO.write_log(0, f'Error while trying to add phrase.\n\tUser_group_chats: {user_group_chats}.\tTarget_chat_id: {target_chat_id}')
         bot.answer_callback_query(call.id, 'Ошибка: нет доступа к этой группе')
         return
     
@@ -284,7 +280,7 @@ def handle_phrase_chat_selection(call):
 @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith(config.param_value['lfp_callback_prefix']+':'))
 def handle_lfp_callback(call):
     # Track user in chat
-    PO.update_user_chat(call.from_user.id, call.message.chat.id, bot=bot)
+    PO.update_user_chat(call.from_user.id, call.message.chat)
     chat_id = call.message.chat.id
     local_params = PO.load_params(chat_id)
     lfp_prune_and_autoclose(bot, BO, PO, LO, chat_id, local_params, config.param_value)
