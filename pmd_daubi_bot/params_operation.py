@@ -1,22 +1,16 @@
 import json
 import os
+import time
 
 class ParamsOperations(object):
     def __init__(self, config):
-        self.config = config
-        self.def_params = {}
-    def load_params(self):
-        pass
-    def save_params(self):
-        pass
-    def check_params(self):
-        pass
-class UserParamsOperations(ParamsOperations):
-    def __init__(self, config):
-        super().__init__(config)
         self.def_params = {'last_time_message_sent':0,
                           'last_time_message_received': 0,
-                          'last_ready_check':0}
+                          'last_ready_check':0,
+                          'ready_check_cd':config.param_value['readycheck_cd'],
+                          'phrases':{},
+                          # Active Looking For Play sessions per chat
+                          'lfp_sessions':{}}
         self.config = config
 
     def load_params(self, chat_id):
@@ -38,24 +32,19 @@ class UserParamsOperations(ParamsOperations):
             params = self.def_params
         return params
 
-    def _save_params(self, entity_id, params, entity_type='chat'):
-        '''Internal unified function to save params for any entity (chat or user)'''
+    def save_params(self, chat_id, params):
+        '''Save json with local parameters for the chat'''
         if not isinstance(params, dict):
             error_text = f'''Params object has type {type(params)} instead of {type(dict)}
     Debug info:
-    \t{entity_type.capitalize()} id: {entity_id}'''
+    \tChat id: {chat_id}'''
+    # \tChat name: {chat_id} # Will be added in future
             raise TypeError(error_text)
         param_dir = self.config.path['data_dir']
-        param_name = f"{entity_id}.param"
+        param_name = f"{chat_id}.param"
         param_path = os.path.join(param_dir, param_name)
-        # Ensure directory exists
-        os.makedirs(param_dir, exist_ok=True)
         with open(param_path, 'w') as fp:
             json.dump(params, fp)
-    
-    def save_params(self, chat_id, params):
-        '''Save json with local parameters for the chat'''
-        self._save_params(chat_id, params, entity_type='chat')
     
     def check_params(self, params):
         def_params = self.def_params
@@ -102,20 +91,39 @@ class UserParamsOperations(ParamsOperations):
     
     def save_user_params(self, user_id, user_params):
         '''Save json with user-specific parameters'''
-        self._save_params(user_id, user_params, entity_type='user')
+        if not isinstance(user_params, dict):
+            error_text = f'''User params object has type {type(user_params)} instead of {type(dict)}
+    Debug info:
+    \tUser id: {user_id}'''
+            raise TypeError(error_text)
+        param_dir = self.config.path['data_dir']
+        param_name = f"{user_id}.param"
+        param_path = os.path.join(param_dir, param_name)
+        # Ensure directory exists
+        os.makedirs(param_dir, exist_ok=True)
+        with open(param_path, 'w') as fp:
+            json.dump(user_params, fp)
     
-    def update_user_chat(self, user_id, chat):
-        '''Update user's chats dictionary to include the given chat. Extracts chat_id and chat name from the chat object.'''
+    def update_user_chat(self, user_id, chat_id, bot=None):
+        '''Update user's chats dictionary to include the given chat_id. Stores chat name if bot is provided or if not already stored.'''
         user_params = self.load_user_params(user_id)
         if 'chats' not in user_params:
             user_params['chats'] = {}
         
-        chat_id = chat.id
-        # Extract chat name from chat object (title for groups, first_name for private chats)
-        chat_name = getattr(chat, 'title', None) or str(chat_id)
-        
-        # Store chat_id and chat_name in the dictionary
-        user_params['chats'][chat_id] = chat_name
+        # Get and store chat name if not already stored or if bot is provided (to update existing)
+        if chat_id not in user_params['chats'] or bot is not None:
+            if bot is not None:
+                try:
+                    chat_info = bot.get_chat(chat_id)
+                    chat_name = getattr(chat_info, 'title', None) or getattr(chat_info, 'first_name', None) or str(chat_id)
+                    user_params['chats'][chat_id] = chat_name
+                except Exception:
+                    # If we can't get chat info and name not stored, use chat_id as name
+                    if chat_id not in user_params['chats']:
+                        user_params['chats'][chat_id] = str(chat_id)
+            else:
+                # If bot not provided and chat not in dict, use chat_id as name
+                user_params['chats'][chat_id] = str(chat_id)
         
         self.save_user_params(user_id, user_params)
     
