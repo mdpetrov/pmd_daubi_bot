@@ -262,7 +262,7 @@ def handle_phrase_chat_selection(call):
         bot.answer_callback_query(call.id, 'Техническая ошибка')
         return
     
-    target_chat_id = int(data[1])
+    target_chat_id = data[1]
     
     # Verify user has access to this chat
     user_group_chats = PO.get_user_group_chats(call.from_user.id)
