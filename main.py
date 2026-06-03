@@ -48,6 +48,43 @@ logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 random.seed(datetime.now().timestamp())
 
+ACTIVE_CHAT_MEMBER_STATUSES = {'creator', 'administrator', 'member'}
+
+
+def _coerce_chat_id(chat_id):
+    try:
+        return int(chat_id)
+    except (TypeError, ValueError):
+        return chat_id
+
+
+def user_has_current_chat_access(user_id, chat_id):
+    """Check current Telegram membership instead of trusting cached chat history."""
+    try:
+        member = bot.get_chat_member(_coerce_chat_id(chat_id), user_id)
+    except Exception as e:
+        logging.warning('Failed to verify user %s membership in chat %s: %s', user_id, chat_id, e)
+        return False
+
+    status = getattr(member, 'status', None)
+    if status in ACTIVE_CHAT_MEMBER_STATUSES:
+        return True
+    if status == 'restricted':
+        return bool(getattr(member, 'is_member', False))
+    return False
+
+
+def get_current_user_group_chats(user_id):
+    user_group_chats = PO.get_user_group_chats(user_id)
+    if not user_group_chats:
+        return None
+
+    current_group_chats = {}
+    for chat_id, chat_name in user_group_chats.items():
+        if user_has_current_chat_access(user_id, chat_id):
+            current_group_chats[str(chat_id)] = chat_name
+    return current_group_chats if current_group_chats else None
+
 
 @bot.message_handler(commands=['start'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_start(message):
@@ -65,7 +102,7 @@ def get_message_start(message):
 @bot.message_handler(commands=['add_phrase'], chat_types=['private'], func=lambda m: (time.time() - m.date <= 5))
 def get_message_add_phrase(message):
     local_params = PO.load_params(message.chat.id)
-    user_group_chats = PO.get_user_group_chats(message.from_user.id)
+    user_group_chats = get_current_user_group_chats(message.from_user.id)
     if not user_group_chats:
         BO.send_message(message.chat.id, text='Ошибка: ты не состоишь ни в одной группе, где работает бот. Фразы можно добавлять только в групповые чаты.', params=local_params)
         return
@@ -97,8 +134,12 @@ def add_phrase(message, phrase, target_chat_id):
             BO.send_message(message.chat.id, text='Нет, так нет.', params=local_params)
         elif answer.lower() in ['да']:
             # Verify user still has access to the selected chat
-            user_group_chats = PO.get_user_group_chats(message.from_user.id)
-            if not user_group_chats or target_chat_id not in user_group_chats:
+            user_group_chats = get_current_user_group_chats(message.from_user.id)
+            if (
+                not user_group_chats
+                or target_chat_id not in user_group_chats
+                or not user_has_current_chat_access(message.from_user.id, target_chat_id)
+            ):
                 BO.send_message(message.chat.id, text='Ошибка: ты не состоишь в выбранной группе, где работает бот. Фразы можно добавлять только в групповые чаты.', params=local_params)
             else:
                 BO.send_message(message.chat.id, text='ПОЕХАЛИ', params=local_params)
@@ -265,8 +306,12 @@ def handle_phrase_chat_selection(call):
     target_chat_id = data[1]
     
     # Verify user has access to this chat
-    user_group_chats = PO.get_user_group_chats(call.from_user.id)
-    if not user_group_chats or target_chat_id not in user_group_chats:
+    user_group_chats = get_current_user_group_chats(call.from_user.id)
+    if (
+        not user_group_chats
+        or target_chat_id not in user_group_chats
+        or not user_has_current_chat_access(call.from_user.id, target_chat_id)
+    ):
         bot.answer_callback_query(call.id, 'Ошибка: нет доступа к этой группе')
         return
     
@@ -343,4 +388,4 @@ def handle_lfp_callback(call):
         
 if __name__ == '__main__':
     LO.write_log(0, 'Start the bot')        
-    bot.polling(none_stop=True, interval=1) #обязательная для работы бота 
+    bot.polling(none_stop=True, interval=1) #обязательная для работы бота
