@@ -8,7 +8,7 @@ path = {"text_phrases": "./.secret/input/text_phrases/text_phrases.json",
 param_value = {'readycheck_cd': 15 * 60,
                'readycheck_default_phrase': 'Объявите время гейминга!',
                # Looking for play (LFP) feature configuration
-               'lfp_close_before_minutes': 15,
+               'lfp_close_before_minutes': 5,
                'lfp_check_interval_seconds': 30,
                'lfp_people_limit': 30,
                'lfp_callback_prefix': 'lfp',

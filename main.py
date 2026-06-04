@@ -360,7 +360,7 @@ def handle_lfp_callback(call):
         bot.answer_callback_query(call.id, answer_text)
     elif action == LFP_ACTION_CLOSE:
         if not lfp_user_can_close(bot, chat_id, call.from_user.id, session):
-            bot.answer_callback_query(call.id, 'Закрыть может только автор сбора или админ')
+            bot.answer_callback_query(call.id, 'Закрыть может только автор сбора')
             return
         lfp_close_session(bot, BO, PO, LO, chat_id, local_params, session, LFP_CLOSE_REASON_MANUAL)
         bot.answer_callback_query(call.id, 'Сбор закрыт')

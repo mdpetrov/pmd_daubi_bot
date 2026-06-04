@@ -142,6 +142,7 @@ def lfp_create_session(chat_id, message_id, creator, parsed, now_ts):
         'min_people': parsed['min_people'],
         'max_people': parsed['max_people'],
         'attendees': attendees,
+        'declined': {},
     }
 
 
@@ -178,11 +179,18 @@ def lfp_count_text(session):
     return f'{count}/{max_people}'
 
 
-def lfp_attendee_lines(session):
-    attendees = session.get('attendees', {})
-    if not attendees:
+def lfp_user_lines(users):
+    if not users:
         return ['пока никого']
-    return [item['tag'] for item in attendees.values()]
+    return [item['tag'] for item in users.values()]
+
+
+def lfp_attendee_lines(session):
+    return lfp_user_lines(session.get('attendees', {}))
+
+
+def lfp_declined_lines(session):
+    return lfp_user_lines(session.get('declined', {}))
 
 
 def lfp_render_text(session, now_ts=None):
@@ -195,6 +203,7 @@ def lfp_render_text(session, now_ts=None):
 
     close_in = _format_minutes(session['close_ts'] - now_ts)
     attendee_text = '\n'.join([f'- {line}' for line in lfp_attendee_lines(session)])
+    declined_text = '\n'.join([f'- {line}' for line in lfp_declined_lines(session)])
     return (
         f'Сбор на игру\n\n'
         f'Время: {session["time_str"]}\n'
@@ -203,7 +212,8 @@ def lfp_render_text(session, now_ts=None):
         f'Статус: {status}\n'
         f'Закроется за {session["close_before_minutes"]} мин. до старта '
         f'(примерно через {close_in})\n\n'
-        f'Участники:\n{attendee_text}'
+        f'Идут:\n{attendee_text}\n\n'
+        f'Не идут ({len(session.get("declined", {}))}):\n{declined_text}'
     )
 
 
@@ -232,13 +242,15 @@ def lfp_render_final_summary(session):
         result = 'Игроков не хватает.'
 
     attendee_text = '\n'.join([f'- {line}' for line in lfp_attendee_lines(session)])
+    declined_text = '\n'.join([f'- {line}' for line in lfp_declined_lines(session)])
     return (
         f'{title}\n\n'
         f'Время: {session["time_str"]}\n'
         f'Кворум: {lfp_quota_text(session)}\n'
         f'Идут: {lfp_count_text(session)}\n'
         f'{result}\n\n'
-        f'Участники:\n{attendee_text}'
+        f'Идут:\n{attendee_text}\n\n'
+        f'Не идут ({len(session.get("declined", {}))}):\n{declined_text}'
     )
 
 
@@ -257,10 +269,12 @@ def lfp_build_keyboard(session, param_value):
 
 def lfp_add_attendee(session, user):
     attendees = session.setdefault('attendees', {})
+    declined = session.setdefault('declined', {})
     user_id = str(user.id)
     max_people = session.get('max_people')
     if max_people is not None and user_id not in attendees and len(attendees) >= max_people:
         return False, 'Мест уже нет: набран максимум игроков.'
+    declined.pop(user_id, None)
     attendees[user_id] = {
         'user_id': user.id,
         'tag': lfp_format_user_tag(user),
@@ -270,8 +284,14 @@ def lfp_add_attendee(session, user):
 
 def lfp_remove_attendee(session, user):
     attendees = session.setdefault('attendees', {})
-    attendees.pop(str(user.id), None)
-    return True, 'Ты удален из списка.'
+    declined = session.setdefault('declined', {})
+    user_id = str(user.id)
+    attendees.pop(user_id, None)
+    declined[user_id] = {
+        'user_id': user.id,
+        'tag': lfp_format_user_tag(user),
+    }
+    return True, 'Ответ записан: не идешь.'
 
 
 def lfp_close_reason(session, now_ts):
@@ -293,13 +313,7 @@ def lfp_finalize_session(session, reason, now_ts=None):
 
 
 def lfp_user_can_close(bot, chat_id, user_id, session):
-    if user_id == session.get('creator_id'):
-        return True
-    try:
-        member = bot.get_chat_member(chat_id, user_id)
-    except Exception:
-        return False
-    return getattr(member, 'status', None) in {'creator', 'administrator'}
+    return user_id == session.get('creator_id')
 
 
 def _safe_telegram_call(LO, log_chat_id, description, func, *args, **kwargs):
