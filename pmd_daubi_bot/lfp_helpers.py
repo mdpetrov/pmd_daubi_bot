@@ -1,7 +1,7 @@
 import html
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from telebot import types
 
@@ -12,6 +12,15 @@ LFP_ACTION_CLOSE = 'close'
 LFP_CLOSE_REASON_TIME = 'time'
 LFP_CLOSE_REASON_FULL = 'full'
 LFP_CLOSE_REASON_MANUAL = 'manual'
+MSK_TZ = timezone(timedelta(hours=3), name='MSK')
+
+
+def lfp_datetime_from_ts(ts):
+    return datetime.fromtimestamp(ts, MSK_TZ)
+
+
+def lfp_format_datetime(dt):
+    return dt.strftime('%d.%m %H:%M МСК')
 
 
 def _format_minutes(seconds):
@@ -32,7 +41,7 @@ def _parse_time_tokens(args, now_ts):
     if not args:
         return None, None, None, 'Укажи время игры.'
 
-    now = datetime.fromtimestamp(now_ts)
+    now = lfp_datetime_from_ts(now_ts)
     if args[0].lower() == 'in':
         if len(args) < 2:
             return None, None, None, 'После "in" укажи количество минут или формат ЧЧ:ММ.'
@@ -47,7 +56,7 @@ def _parse_time_tokens(args, now_ts):
         else:
             return None, None, None, 'Не понял относительное время. Пример: /lfp in 90 3 5.'
         target_dt = now + delta
-        return int(target_dt.timestamp()), target_dt.strftime('%H:%M'), args[2:], None
+        return int(target_dt.timestamp()), lfp_format_datetime(target_dt), args[2:], None
 
     time_token = args[0]
     if re.fullmatch(r'\d{1,2}', time_token):
@@ -61,13 +70,10 @@ def _parse_time_tokens(args, now_ts):
     if hours >= 24 or minutes >= 60:
         return None, None, None, 'Время должно быть в формате ЧЧ:ММ.'
 
-    if hours < 12:
-        hours = (hours + 12) % 24
-
     target_dt = now.replace(hour=hours, minute=minutes, second=0, microsecond=0)
     if target_dt <= now:
         target_dt += timedelta(days=1)
-    return int(target_dt.timestamp()), target_dt.strftime('%H:%M'), args[1:], None
+    return int(target_dt.timestamp()), lfp_format_datetime(target_dt), args[1:], None
 
 
 def lfp_parse_request(args_text, now_ts, param_value):
@@ -94,7 +100,11 @@ def lfp_parse_request(args_text, now_ts, param_value):
     close_before_minutes = param_value['lfp_close_before_minutes']
     close_ts = target_ts - close_before_minutes * 60
     if close_ts <= now_ts:
-        return None, f'До игры должно быть больше {close_before_minutes} мин., иначе сбор сразу закроется.'
+        earliest_start = lfp_datetime_from_ts(now_ts + close_before_minutes * 60)
+        return None, (
+            f'До игры должно быть больше {close_before_minutes} мин., иначе сбор сразу закроется.\n'
+            f'Ближайшее допустимое время старта: {lfp_format_datetime(earliest_start)}.'
+        )
 
     return {
         'start_ts': target_ts,
@@ -292,11 +302,11 @@ def lfp_user_can_close(bot, chat_id, user_id, session):
     return getattr(member, 'status', None) in {'creator', 'administrator'}
 
 
-def _safe_telegram_call(LO, chat_id, description, func, *args, **kwargs):
+def _safe_telegram_call(LO, log_chat_id, description, func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except Exception as e:
-        LO.write_log(chat_id, f'LFP {description} failed: {e}')
+        LO.write_log(log_chat_id, f'LFP {description} failed: {e}')
         return None
 
 
