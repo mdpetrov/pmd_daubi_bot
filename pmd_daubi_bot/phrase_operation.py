@@ -152,9 +152,7 @@ class PhraseOperations(object):
         Returns: (should_respond, response_reason, response_phrase)
         """
         # For regular messages, only respond with 5% chance using random phrase from text_phrases.json
-        if time.time() - last_message_time >= 60 * 60 * 5: # If 5 hours passed, respond
-            should_respond = True
-        elif random.random() <= 0.05: # 5% chance
+        if random.random() <= 0.05: # 5% chance
             should_respond = True  
         else:
             should_respond = False

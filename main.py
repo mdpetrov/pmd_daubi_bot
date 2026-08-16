@@ -180,7 +180,7 @@ def get_message_readycheck(message):
     BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML')
     PO.save_params(message.chat.id, local_params)
     
-@bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
+#@bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_lfp(message):
     # Track user in chat
     PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
