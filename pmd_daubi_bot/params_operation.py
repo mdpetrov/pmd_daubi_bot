@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import time
@@ -9,7 +10,9 @@ class ParamsOperations(object):
                           'last_ready_check':0,
                           'ready_check_cd':config.param_value['readycheck_cd'],
                           'phrases':{},
-                          # Active Looking For Play sessions per chat
+                          # Active Looking For Play session per chat
+                          'lfp_session': None,
+                          # Legacy LFP session storage; kept for migration compatibility
                           'lfp_sessions':{}}
         self.config = config
 
@@ -29,7 +32,7 @@ class ParamsOperations(object):
                 raise TypeError(error_text)
             params = self.check_params(params)
         else:
-            params = self.def_params
+            params = copy.deepcopy(self.def_params)
         return params
 
     def save_params(self, chat_id, params):
@@ -50,7 +53,7 @@ class ParamsOperations(object):
         def_params = self.def_params
         for k,v in def_params.items():
             if k not in params.keys():
-                params[k] = v
+                params[k] = copy.deepcopy(v)
         return params
     
     def load_user_params(self, user_id):
