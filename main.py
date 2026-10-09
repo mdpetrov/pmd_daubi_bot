@@ -94,6 +94,7 @@ def get_message_start(message):
 Список команд:
     /start - вывести стартовое сообщение
     /ready_check - Провести проверку готовности (только в групповых чатах)
+    /ready_poll - Проверка готовности с опросом "Буду играть сегодня?" (только в групповых чатах)
     /add_phrase - Добавить фразу (только в ЛС)
 '''
     BO.send_message(message.chat.id, text=start_text, params=local_params)
@@ -151,6 +152,14 @@ def add_phrase(message, phrase, target_chat_id):
     
 @bot.message_handler(commands=['ready_check'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
 def get_message_readycheck(message):
+    do_ready_check(message, with_poll=False)
+
+@bot.message_handler(commands=['ready_poll'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
+def get_message_readypoll(message):
+    do_ready_check(message, with_poll=True)
+
+def do_ready_check(message, with_poll):
+    '''Tag chat members; with_poll also posts a non-anonymous "will I play today" poll. Cooldown is shared by both commands.'''
     # Track user in chat
     PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
     local_params = PO.load_params(message.chat.id)
@@ -161,9 +170,10 @@ def get_message_readycheck(message):
     LO.write_log(message.chat.id, local_params)
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
+    on_cooldown = time_remain > 0
     if time_remain >= 60:
         text = f'Ready Check Cooldown: {int(time_remain / 60)} min'
-    elif time_remain > 0:
+    elif on_cooldown:
         text = f'Ready Check Cooldown: {int(time_remain)} sec'
     else:
         chat_members = []
@@ -177,7 +187,16 @@ def get_message_readycheck(message):
         text = f'{text} {" ".join(chat_members)}'
         local_params['last_ready_check'] = cur_time
         # text = f'Объявите время гейминга! {" ".join(chat_members)}'
-    BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML')
+    tag_message = BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML')
+    if with_poll and not on_cooldown:
+        LO.write_log(message.chat.id, 'Sending ready poll')
+        bot.send_poll(
+            message.chat.id,
+            question=config.param_value['readypoll_question'],
+            options=config.param_value['readypoll_options'],
+            is_anonymous=False,
+            reply_to_message_id=tag_message.message_id
+        )
     PO.save_params(message.chat.id, local_params)
     
 #@bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))

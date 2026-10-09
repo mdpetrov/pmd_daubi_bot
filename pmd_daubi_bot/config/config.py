@@ -6,6 +6,9 @@ path = {"text_phrases": "./.secret/input/text_phrases/text_phrases.json",
         "response_keywords": "./.secret/input/response_keywords.json"}
 param_value = {'readycheck_cd': 15 * 60,
                'readycheck_default_phrase': 'Объявите время гейминга!',
+               # /ready_poll poll text
+               'readypoll_question': 'Буду играть сегодня?',
+               'readypoll_options': ['Да', 'Нет', 'Возможно'],
                # Looking for play (LFP) feature configuration
                'lfp_quorum_default': 5,
                'lfp_quorum_min': 1,
