@@ -190,13 +190,17 @@ def do_ready_check(message, with_poll):
     tag_message = BO.send_message(message.chat.id, text=text, params=local_params, parse_mode='HTML')
     if with_poll and not on_cooldown:
         LO.write_log(message.chat.id, 'Sending ready poll')
-        bot.send_poll(
-            message.chat.id,
-            question=config.param_value['readypoll_question'],
-            options=config.param_value['readypoll_options'],
-            is_anonymous=False,
-            reply_to_message_id=tag_message.message_id
-        )
+        # Failure here must not skip saving the cooldown below
+        try:
+            bot.send_poll(
+                message.chat.id,
+                question=config.param_value['readypoll_question'],
+                options=config.param_value['readypoll_options'],
+                is_anonymous=False,
+                reply_to_message_id=tag_message.message_id
+            )
+        except Exception as e:
+            LO.write_log(message.chat.id, f'Failed to send ready poll: {e}')
     PO.save_params(message.chat.id, local_params)
     
 #@bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
