@@ -4,7 +4,7 @@ path = {"text_phrases": "./.secret/input/text_phrases/text_phrases.json",
         "data_dir": "./.secret/data",
         "readycheck_phrases": "./.secret/input/readycheck_phrases.csv",
         "response_keywords": "./.secret/input/response_keywords.json"}
-param_value = {'readycheck_cd': 15 * 60,
+param_value = {'readycheck_cd': 5 * 60,
                'readycheck_default_phrase': 'Объявите время гейминга!',
                # /ready_poll poll text
                'readypoll_question': 'Буду играть сегодня?',

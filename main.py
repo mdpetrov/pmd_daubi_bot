@@ -18,6 +18,7 @@ from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
 from pmd_daubi_bot.phrase_operation import PhraseOperations
+from pmd_daubi_bot.ready_poll_helpers import next_poll_unpin_time, prune_ready_poll_pins
 
 from pmd_daubi_bot.lfp_helpers import (
     lfp_parse_time_and_quorum,
@@ -167,6 +168,7 @@ def do_ready_check(message, with_poll):
     
     LO.write_log(message.chat.id, 'Trying to perform a ready check')
     cur_time = time.time()
+    prune_ready_poll_pins(bot, LO, message.chat.id, local_params, cur_time)
     LO.write_log(message.chat.id, local_params)
     time_diff = cur_time - local_params['last_ready_check']
     time_remain = readycheck_cd - time_diff
@@ -192,15 +194,29 @@ def do_ready_check(message, with_poll):
         LO.write_log(message.chat.id, 'Sending ready poll')
         # Failure here must not skip saving the cooldown below
         try:
-            bot.send_poll(
+            poll_message = bot.send_poll(
                 message.chat.id,
                 question=config.param_value['readypoll_question'],
                 options=config.param_value['readypoll_options'],
                 is_anonymous=False,
+                allow_adding_options=True,
                 reply_to_message_id=tag_message.message_id
             )
         except Exception as e:
             LO.write_log(message.chat.id, f'Failed to send ready poll: {e}')
+        else:
+            try:
+                bot.pin_chat_message(
+                    chat_id=message.chat.id,
+                    message_id=poll_message.message_id,
+                    disable_notification=True
+                )
+                local_params.setdefault('ready_poll_pins', []).append({
+                    'message_id': poll_message.message_id,
+                    'unpin_at': next_poll_unpin_time(time.time())
+                })
+            except Exception as e:
+                LO.write_log(message.chat.id, f'Failed to pin ready poll: {e}')
     PO.save_params(message.chat.id, local_params)
     
 #@bot.message_handler(commands=['looking_for_play', 'lfp'], chat_types=['group', 'supergroup'], func=lambda m: (time.time() - m.date <= 10))
@@ -274,6 +290,7 @@ def get_message_group(message):
     PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
     # Lazy auto-close expired LFP sessions on any group text
     local_params = PO.load_params(message.chat.id)
+    prune_ready_poll_pins(bot, LO, message.chat.id, local_params, time.time())
     lfp_prune_and_autoclose(bot, BO, PO, LO, message.chat.id, local_params, config.param_value)
     PO.save_params(message.chat.id, local_params)
     # Reload to continue normal processing with freshest params
