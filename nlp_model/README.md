@@ -45,3 +45,40 @@ joblib files, because loading them can execute Python code.
 
 Tests: `python -m unittest discover -s tests -p "test_*tfidf.py"` and
 `python -m unittest discover -s tests -p test_prepare_training_data.py`.
+
+## Bot integration on Ubuntu
+
+The bot loads the artifact once at startup and searches when a user replies to
+it. Weak matches, missing dependencies, or model errors use the existing reply
+logic. The existing 95% reply probability remains in place.
+
+Set `TFIDF_CHAT_ID` to the Telegram group ID whose history trained the model
+(the actual Bot API chat ID, typically starting with `-100`, not a username or
+the positive ID in an export). Retrieval is disabled without this setting and
+never runs in other groups. `TFIDF_THRESHOLD` optionally changes the initial
+similarity threshold of 0.25.
+
+Copy the updated `main.py`, `pmd_daubi_bot/phrase_operation.py`,
+`pmd_daubi_bot/reply_retrieval.py`, and `nlp_model/` to the server. Keep the
+artifact already trained on Ubuntu. Install `nlp_model/requirements.txt` into
+the bot's existing venv if needed.
+
+Run `sudo systemctl edit YOUR_SERVICE.service` and add:
+
+```ini
+[Service]
+Environment="TFIDF_CHAT_ID=-100YOUR_GROUP_ID"
+Environment="TFIDF_THRESHOLD=0.25"
+```
+
+Replace the example service name and chat ID, then run:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart YOUR_SERVICE.service
+sudo systemctl status YOUR_SERVICE.service --no-pager
+```
+
+The bot's `.secret/log/0.log` reports whether the model loaded. Test in the
+configured group by replying directly to a bot message. To disable retrieval,
+remove the `TFIDF_CHAT_ID` environment setting and restart the service.

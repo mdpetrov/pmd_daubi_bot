@@ -5,12 +5,14 @@ import time
 from os.path import join, dirname, isfile
 from os import makedirs
 from pmd_daubi_bot.log_operation import LogOperations
+from pmd_daubi_bot.reply_retrieval import ReplyRetrieval
 
 
 class PhraseOperations(object):
     def __init__(self, config):
         self.config = config
         self.LO = LogOperations(config)
+        self.reply_retrieval = ReplyRetrieval()
 
     def random_phrase(self, chat_id):
         """
@@ -189,6 +191,10 @@ class PhraseOperations(object):
         # First check if we should respond at all (95% chance to respond to replies)
         if random.random() > 0.95:  # 5% chance to ignore
             return None
+
+        retrieved = self.reply_retrieval.reply(reply_text, chat_id)
+        if retrieved is not None:
+            return retrieved
             
         keywords = self.load_response_keywords()
         reply_text_lower = reply_text.lower()

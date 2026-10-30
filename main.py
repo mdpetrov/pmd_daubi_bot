@@ -41,10 +41,10 @@ bot = telebot.TeleBot(token, threaded=False)
 PO = ParamsOperations(config=config)
 LO = LogOperations(config=config)
 BO = BotOperations(bot=bot)
-PhO = PhraseOperations(config=config)
 
 LOG_FILENAME = '.secret/log/0.log'
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+PhO = PhraseOperations(config=config)
 
 
 random.seed(datetime.now().timestamp())
