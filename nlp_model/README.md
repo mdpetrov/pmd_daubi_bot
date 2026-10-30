@@ -49,8 +49,10 @@ Tests: `python -m unittest discover -s tests -p "test_*tfidf.py"` and
 ## Bot integration on Ubuntu
 
 The bot loads the artifact once at startup and searches when a user replies to
-it. Weak matches, missing dependencies, or model errors use the existing reply
-logic. The existing 95% reply probability remains in place.
+it (95% response chance), and for ordinary group messages selected by the
+existing 5% response chance. Retrieved answers to ordinary messages are sent
+as Telegram replies to those messages. Weak matches, missing dependencies, or
+model errors use the existing reply logic or random phrases.
 
 Set `TFIDF_CHAT_ID` to the Telegram group ID whose history trained the model
 (the actual Bot API chat ID, typically starting with `-100`, not a username or

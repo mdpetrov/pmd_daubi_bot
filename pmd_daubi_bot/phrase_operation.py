@@ -150,10 +150,10 @@ class PhraseOperations(object):
     def analyze_message_and_decide_response(self, message_text, chat_id, last_message_time):
         """
         Analyze message content and decide whether to respond and how
-        For regular messages (not replies), only respond with random phrase from text_phrases.json with 5% chance
+        For regular messages, respond with 5% chance using retrieval or a random phrase.
         Returns: (should_respond, response_reason, response_phrase)
         """
-        # For regular messages, only respond with 5% chance using random phrase from text_phrases.json
+        # Keep ordinary group chatter at the existing 5% response rate.
         if random.random() <= 0.05: # 5% chance
             should_respond = True  
         else:
@@ -162,7 +162,12 @@ class PhraseOperations(object):
         response_phrase = "ДАУБИ"
         
         if should_respond:
-            response_phrase = self.random_phrase(chat_id)
+            retrieved = self.reply_retrieval.reply(message_text, chat_id)
+            if retrieved is not None:
+                response_reason = "tfidf_message"
+                response_phrase = retrieved
+            else:
+                response_phrase = self.random_phrase(chat_id)
         
         return should_respond, response_reason, response_phrase
     

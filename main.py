@@ -325,7 +325,8 @@ def get_message_group(message):
         
         if should_respond:
             LO.write_log(chat_id=message.chat.id, text=f'Responding to regular message: {response_phrase}')
-            BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5)
+            reply_options = {'reply_to_message_id': message.id} if response_reason == 'tfidf_message' else {}
+            BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5, **reply_options)
     
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
