@@ -14,7 +14,7 @@ import unicodedata
 
 
 TRAINING_DIR = Path(__file__).resolve().parent.parent / ".secret" / "nlp_model" / "training_data"
-DEFAULT_OUTPUT = TRAINING_DIR.parent / "prepared_tfidf.json"
+DEFAULT_OUTPUT = TRAINING_DIR / "prepared_tfidf.json"
 MEDIA_FIELDS = (
     "photo", "file", "media_type", "poll", "contact_information",
     "contact_vcard", "location_information", "rich_message",
