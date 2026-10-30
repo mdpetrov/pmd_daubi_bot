@@ -48,17 +48,31 @@ Tests: `python -m unittest discover -s tests -p "test_*tfidf.py"` and
 
 ## Bot integration on Ubuntu
 
-The bot loads the artifact once at startup and searches when a user replies to
-it (95% response chance), and for ordinary group messages selected by the
-existing 5% response chance. Retrieved answers to ordinary messages are sent
-as Telegram replies to those messages. Weak matches, missing dependencies, or
-model errors use the existing reply logic or random phrases.
+The bot loads the artifact once at startup. Direct replies to this bot always
+receive an answer. For other messages it draws one random number, skips all
+searches when that number exceeds 0.5, and reuses that same number below:
+
+| Best score | Ordinary-message probability | Answer |
+| --- | --- | --- |
+| >= 0.75 | 50% | Random distinct answer from all matches >= 0.75 |
+| >= 0.5 and < 0.75 | 10% | Random distinct answer from that band |
+| < 0.5 or no match | 5% | Existing random phrase |
+
+Each actual search starts a five-second cooldown per chat, even if no answer
+is sent or search fails. During cooldown, missing-model, or disabled-chat
+conditions, random phrases use 100% probability for direct replies to this bot
+and 5% for ordinary messages. Other users' replies count as ordinary messages.
+The bot's own messages and replies to polls sent by any bot are excluded from
+free speech. Polls, commands, and maintenance continue independently.
+Model answers are sent as Telegram replies to the triggering message.
+Logs record the decision reason (probability gate, score band, cooldown,
+no match, disabled model, or search error).
 
 Set `TFIDF_CHAT_ID` to the Telegram group ID whose history trained the model
 (the actual Bot API chat ID, typically starting with `-100`, not a username or
 the positive ID in an export). Retrieval is disabled without this setting and
-never runs in other groups. `TFIDF_THRESHOLD` optionally changes the initial
-similarity threshold of 0.25.
+never runs in other groups. `TFIDF_THRESHOLD` is no longer used by the bot;
+the decision bands above replace it.
 
 Copy the updated `main.py`, `pmd_daubi_bot/phrase_operation.py`,
 `pmd_daubi_bot/reply_retrieval.py`, and `nlp_model/` to the server. Keep the
@@ -70,7 +84,6 @@ Run `sudo systemctl edit YOUR_SERVICE.service` and add:
 ```ini
 [Service]
 Environment="TFIDF_CHAT_ID=-100YOUR_GROUP_ID"
-Environment="TFIDF_THRESHOLD=0.25"
 ```
 
 Replace the example service name and chat ID, then run:

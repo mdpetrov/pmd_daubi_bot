@@ -147,30 +147,31 @@ class PhraseOperations(object):
             keywords = json.load(con)
         return keywords
     
+    def decide_free_speech(self, message_text, chat_id, is_reply=False):
+        """Use one probability draw for the early gate and score-band decision."""
+        draw = None if is_reply else random.random()
+        if draw is not None and draw > 0.5:
+            return False, "probability_gate", None
+
+        matches, status = self.reply_retrieval.candidates(message_text, chat_id)
+        high = [match for match in matches if match['score'] >= 0.75]
+        medium = [match for match in matches if 0.5 <= match['score'] < 0.75]
+        band = high or medium
+        if band:
+            probability = 0.5 if high else 0.1
+            reason = "tfidf_high" if high else "tfidf_medium"
+            if is_reply or draw <= probability:
+                replies = list(dict.fromkeys(match['reply'] for match in band))
+                return True, reason, random.choice(replies)
+            return False, reason + "_silent", None
+
+        if is_reply or draw <= 0.05:
+            return True, "random_" + status, self.random_phrase(chat_id)
+        return False, "silent_" + status, None
+
     def analyze_message_and_decide_response(self, message_text, chat_id, last_message_time):
-        """
-        Analyze message content and decide whether to respond and how
-        For regular messages, respond with 5% chance using retrieval or a random phrase.
-        Returns: (should_respond, response_reason, response_phrase)
-        """
-        # Keep ordinary group chatter at the existing 5% response rate.
-        if random.random() <= 0.05: # 5% chance
-            should_respond = True  
-        else:
-            should_respond = False
-        response_reason = "random_message"
-        response_phrase = "ДАУБИ"
-        
-        if should_respond:
-            retrieved = self.reply_retrieval.reply(message_text, chat_id)
-            if retrieved is not None:
-                response_reason = "tfidf_message"
-                response_phrase = retrieved
-            else:
-                response_phrase = self.random_phrase(chat_id)
-        
-        return should_respond, response_reason, response_phrase
-    
+        return self.decide_free_speech(message_text, chat_id)
+
     def _get_contextual_phrase(self, response_reason, chat_id):
         """Get appropriate phrase based on response reason"""
         keywords = self.load_response_keywords()
@@ -189,71 +190,5 @@ class PhraseOperations(object):
             return self.random_phrase(chat_id)
     
     def analyze_reply_to_bot(self, reply_text, chat_id=None):
-        """
-        Analyze reply to bot message and return appropriate response
-        Returns: response_phrase or None if no response should be sent
-        """
-        # First check if we should respond at all (95% chance to respond to replies)
-        if random.random() > 0.95:  # 5% chance to ignore
-            return None
-
-        retrieved = self.reply_retrieval.reply(reply_text, chat_id)
-        if retrieved is not None:
-            return retrieved
-            
-        keywords = self.load_response_keywords()
-        reply_text_lower = reply_text.lower()
-        
-        # Check for all response categories in order of priority with probability checks
-        # Check for gaming-related keywords
-        if any(word in reply_text_lower for word in keywords['gaming_keywords']['words']):
-            if random.random() <= keywords['gaming_keywords']['probability']:
-                return self.random_phrase(chat_id)  # Use gaming phrases from chat-specific or default phrase database
-            return None
-        
-        # Check for greeting keywords
-        elif any(word in reply_text_lower for word in keywords['greeting_keywords']['words']):
-            if random.random() <= keywords['greeting_keywords']['probability']:
-                phrases = keywords['response_phrases'].get('greeting', [])
-                return random.choice(phrases) if phrases else "здорова 👋"
-            return None
-        
-        # Check for question keywords
-        elif any(word in reply_text_lower for word in keywords['question_keywords']['words']):
-            if random.random() <= keywords['question_keywords']['probability']:
-                phrases = keywords['response_phrases'].get('question', [])
-                return random.choice(phrases) if phrases else "А хуй его знает, чел.. 🤔"
-            return None
-        
-        # Check for agreement keywords
-        elif any(word in reply_text_lower for word in keywords['agreement_keywords']['words']):
-            if random.random() <= keywords['agreement_keywords']['probability']:
-                phrases = keywords['response_phrases'].get('agreement', [])
-                return random.choice(phrases) if phrases else "найс найс найс 👍"
-            return None
-        
-        # Check for disagreement keywords
-        elif any(word in reply_text_lower for word in keywords['disagreement_keywords']['words']):
-            if random.random() <= keywords['disagreement_keywords']['probability']:
-                phrases = keywords['response_phrases'].get('disagreement', [])
-                return random.choice(phrases) if phrases else "да мне поебать"
-            return None
-        
-        # Check for negative sentiment
-        elif any(word in reply_text_lower for word in keywords['negative_keywords']['words']):
-            if random.random() <= keywords['negative_keywords']['probability']:
-                phrases = keywords['response_phrases'].get('negative', [])
-                return random.choice(phrases) if phrases else "Без негатива же..."
-            return None
-        
-        # Check for positive sentiment
-        elif any(word in reply_text_lower for word in keywords['positive_keywords']['words']):
-            if random.random() <= keywords['positive_keywords']['probability']:
-                phrases = keywords['response_phrases'].get('positive', [])
-                return random.choice(phrases) if phrases else "Охуенно! 😊"
-            return None
-        
-        else:
-            # For neutral replies, use a random phrase from text_phrases.json
-            # Since we already have 95% chance to respond, we'll use the phrase database
-            return self.random_phrase(chat_id)  # Use weighted phrase selection for neutral replies (chat-specific or default phrases)
+        should_respond, _, phrase = self.decide_free_speech(reply_text, chat_id, is_reply=True)
+        return phrase if should_respond else None

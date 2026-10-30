@@ -18,6 +18,7 @@ from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
 from pmd_daubi_bot.phrase_operation import PhraseOperations
+from pmd_daubi_bot.reply_retrieval import classify_message
 from pmd_daubi_bot.ready_poll_helpers import next_poll_unpin_time, prune_ready_poll_pins
 
 from pmd_daubi_bot.lfp_helpers import (
@@ -37,6 +38,7 @@ with open(path['token'], 'rt', encoding='utf8') as fp:
 	token = fp.read()
 
 bot = telebot.TeleBot(token, threaded=False)
+BOT_USER_ID = int(token.split(":", 1)[0])
 
 PO = ParamsOperations(config=config)
 LO = LogOperations(config=config)
@@ -295,39 +297,21 @@ def get_message_group(message):
     PO.save_params(message.chat.id, local_params)
     # Reload to continue normal processing with freshest params
     local_params = PO.load_params(message.chat.id)
-    responded = False
-    
-    # Handle replies to bot messages
-    if message.reply_to_message:
-        if message.reply_to_message.from_user.username == 'daubi2_bot':
-            # Use phrase operations to analyze reply and get response
-            message_sent = PhO.analyze_reply_to_bot(message.text, chat_id=message.chat.id)
-            LO.write_log(chat_id=message.chat.id, text='Reply to bot detected')
-            if message_sent is not None:
-                LO.write_log(chat_id=message.chat.id, text=f'Responding to reply: {message_sent}')
-                BO.send_message(message.chat.id, text=message_sent, params=local_params, sleep=0.5, reply_to_message_id=message.id)
-                responded = True
-            else:
-                LO.write_log(chat_id=message.chat.id, text='Ignoring reply (5% chance)')
-
-    # Handle regular messages (not replies)
-    if not responded:
-        # Use phrase operations to analyze message and decide response
-        should_respond, response_reason, response_phrase = PhO.analyze_message_and_decide_response(
-        message.text, 
-        message.chat.id, 
-        local_params['last_time_message_received']
-        )   
-    
-        # Log the decision
-        rand_val = random.random()
-        LO.write_log(chat_id=message.chat.id, text=f'Regular message - Random = {round(rand_val, 2)}, Should respond: {should_respond}, Reason: {response_reason}')
-        
+    excluded, is_reply = classify_message(message, BOT_USER_ID)
+    if not excluded:
+        should_respond, reason, phrase = PhO.decide_free_speech(
+            message.text, message.chat.id, is_reply=is_reply
+        )
+        LO.write_log(chat_id=message.chat.id,
+                     text=f'Free speech: reply={is_reply}, respond={should_respond}, reason={reason}')
         if should_respond:
-            LO.write_log(chat_id=message.chat.id, text=f'Responding to regular message: {response_phrase}')
-            reply_options = {'reply_to_message_id': message.id} if response_reason == 'tfidf_message' else {}
-            BO.send_message(message.chat.id, text=response_phrase, params=local_params, sleep=0.5, **reply_options)
-    
+            if reason.startswith('tfidf_'):
+                LO.write_log(chat_id=message.chat.id,
+                             text=f'TF-IDF message selected ({reason}): {phrase}')
+            reply_options = {'reply_to_message_id': message.id} if is_reply or reason.startswith('tfidf_') else {}
+            BO.send_message(message.chat.id, text=phrase, params=local_params,
+                            sleep=0.5, **reply_options)
+
     local_params['last_time_message_received'] = time.time()
     PO.save_params(message.chat.id, local_params)
 
