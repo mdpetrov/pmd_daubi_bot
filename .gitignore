@@ -12,4 +12,4 @@ nohup.out
 pid.nohup
 pmd_daubi_bot.egg-info
 venv
-
+.venv-nlp/
