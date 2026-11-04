@@ -5,6 +5,9 @@ import os
 import time
 
 
+MIN_REPLY_SCORE = 0.75
+
+
 def classify_message(message, bot_id):
     """Return (exclude free speech, direct reply to this bot)."""
     sender = getattr(message, 'from_user', None)
@@ -43,7 +46,9 @@ class ReplyRetrieval:
         if now - self.last_search.get(key, float('-inf')) < 5:
             return [], "cooldown"
         try:
-            matches = self.search(self.model, text, top_k=len(self.model['replies']), threshold=0.5)
+            matches = self.search(
+                self.model, text, top_k=len(self.model['replies']), threshold=MIN_REPLY_SCORE
+            )
             return matches, "no_match" if not matches else "matched"
         except Exception:
             logging.exception("TF-IDF search failed; using existing replies")

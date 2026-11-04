@@ -17,6 +17,7 @@ from pmd_daubi_bot.config import config
 from pmd_daubi_bot.params_operation import ParamsOperations
 from pmd_daubi_bot.log_operation import LogOperations
 from pmd_daubi_bot.bot_operation import BotOperations
+from pmd_daubi_bot.chat_message_store import ChatMessageStore
 from pmd_daubi_bot.phrase_operation import PhraseOperations
 from pmd_daubi_bot.reply_retrieval import classify_message
 from pmd_daubi_bot.ready_poll_helpers import next_poll_unpin_time, prune_ready_poll_pins
@@ -43,6 +44,7 @@ BOT_USER_ID = int(token.split(":", 1)[0])
 PO = ParamsOperations(config=config)
 LO = LogOperations(config=config)
 BO = BotOperations(bot=bot)
+chat_messages = ChatMessageStore(path['data_dir'])
 
 LOG_FILENAME = '.secret/log/0.log'
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
@@ -286,8 +288,16 @@ def get_message_lfp(message):
     PO.save_params(message.chat.id, local_params)
     LO.write_log(chat_id=message.chat.id, text="Params saved after LFP session creation")
 
-@bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'], func=lambda m: (time.time() - m.date <= 10))
+@bot.message_handler(chat_types=['group', 'supergroup'], content_types=['text'])
 def get_message_group(message):
+    is_fresh = time.time() - message.date <= 10
+    try:
+        chat_messages.append(message)
+    except OSError:
+        logging.exception('Failed to save message %s from chat %s', message.message_id, message.chat.id)
+    if not is_fresh:
+        return
+
     # Track user in chat
     PO.update_user_chat(message.from_user.id, message.chat.id, bot=bot)
     # Lazy auto-close expired LFP sessions on any group text
@@ -302,12 +312,7 @@ def get_message_group(message):
         should_respond, reason, phrase = PhO.decide_free_speech(
             message.text, message.chat.id, is_reply=is_reply
         )
-        LO.write_log(chat_id=message.chat.id,
-                     text=f'Free speech: reply={is_reply}, respond={should_respond}, reason={reason}')
         if should_respond:
-            if reason.startswith('tfidf_'):
-                LO.write_log(chat_id=message.chat.id,
-                             text=f'TF-IDF message selected ({reason}): {phrase}')
             reply_options = {'reply_to_message_id': message.id} if is_reply or reason.startswith('tfidf_') else {}
             BO.send_message(message.chat.id, text=phrase, params=local_params,
                             sleep=0.5, **reply_options)

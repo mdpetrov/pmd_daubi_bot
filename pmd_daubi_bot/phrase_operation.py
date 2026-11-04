@@ -5,7 +5,7 @@ import time
 from os.path import join, dirname, isfile
 from os import makedirs
 from pmd_daubi_bot.log_operation import LogOperations
-from pmd_daubi_bot.reply_retrieval import ReplyRetrieval
+from pmd_daubi_bot.reply_retrieval import MIN_REPLY_SCORE, ReplyRetrieval
 
 
 class PhraseOperations(object):
@@ -148,24 +148,19 @@ class PhraseOperations(object):
         return keywords
     
     def decide_free_speech(self, message_text, chat_id, is_reply=False):
-        """Use one probability draw for the early gate and score-band decision."""
-        draw = None if is_reply else random.random()
-        if draw is not None and draw > 0.5:
+        """Apply the same response probabilities to ordinary messages and replies."""
+        draw = random.random()
+        if draw > 0.5:
             return False, "probability_gate", None
 
         matches, status = self.reply_retrieval.candidates(message_text, chat_id)
-        high = [match for match in matches if match['score'] >= 0.75]
-        medium = [match for match in matches if 0.5 <= match['score'] < 0.75]
-        band = high or medium
-        if band:
-            probability = 0.5 if high else 0.1
-            reason = "tfidf_high" if high else "tfidf_medium"
-            if is_reply or draw <= probability:
-                replies = list(dict.fromkeys(match['reply'] for match in band))
-                return True, reason, random.choice(replies)
-            return False, reason + "_silent", None
+        replies = list(dict.fromkeys(
+            match['reply'] for match in matches if match['score'] >= MIN_REPLY_SCORE
+        ))
+        if replies:
+            return True, "tfidf_high", random.choice(replies)
 
-        if is_reply or draw <= 0.05:
+        if draw <= 0.05:
             return True, "random_" + status, self.random_phrase(chat_id)
         return False, "silent_" + status, None
 

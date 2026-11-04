@@ -1,7 +1,7 @@
-"""Extract text-only message/reply pairs from a Telegram JSON export.
+"""Extract text-only message/reply pairs from a Telegram export or bot archive.
 
-Usage: python nlp_model/prepare_training_data.py [export.json] [-o prepared.json]
-Without an input path, uses the sole JSON in .secret/training_data.
+Usage: python nlp_model/prepare_training_data.py [export.json or chat.jsonl] [-o prepared.json]
+Without an input path, uses the sole JSON in .secret/nlp_model/training_data.
 The default output also stays in that ignored, private directory.
 """
 
@@ -116,6 +116,23 @@ def prepare_training_data(export, max_chars=1000):
     }
 
 
+def load_training_source(input_path):
+    with input_path.open(encoding="utf-8-sig") as stream:
+        if input_path.suffix.lower() != ".jsonl":
+            return json.load(stream)
+
+        messages = []
+        for number, line in enumerate(stream, start=1):
+            try:
+                message = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"Invalid JSON in chat archive at line {number}") from error
+            if not isinstance(message, dict):
+                raise ValueError(f"Expected a chat message object at line {number}")
+            messages.append(message)
+        return {"id": input_path.stem, "messages": messages}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", nargs="?", type=Path)
@@ -135,8 +152,7 @@ def main():
         input_path = candidates[0]
     if input_path.resolve() == args.output.resolve():
         parser.error("Output must differ from the original export")
-    with input_path.open(encoding="utf-8-sig") as stream:
-        dataset = prepare_training_data(json.load(stream), args.max_chars)
+    dataset = prepare_training_data(load_training_source(input_path), args.max_chars)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as stream:
         json.dump(dataset, stream, ensure_ascii=False, indent=2)

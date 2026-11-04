@@ -21,7 +21,7 @@ class ReplyRetrievalTests(unittest.TestCase):
             instance.search.assert_not_called()
             self.assertEqual(instance.candidates("Q", -123)[1], "matched")
             self.assertEqual(instance.candidates("Q", -123)[1], "cooldown")
-            self.assertEqual(instance.search.call_count, 1)
+            instance.search.assert_called_once_with(instance.model, "Q", top_k=1, threshold=0.75)
         with patch("pmd_daubi_bot.reply_retrieval.time.monotonic", return_value=15):
             self.assertEqual(instance.candidates("Q", -123)[1], "matched")
 
