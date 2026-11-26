@@ -35,7 +35,8 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 path = config.path
 # Open bot
-token = os.environ["TELEGRAM_BOT_TOKEN"]
+with open(path['token'], 'rt', encoding='utf8') as fp:
+	token = fp.read()
 
 bot = telebot.TeleBot(token, threaded=False)
 BOT_USER_ID = int(token.split(":", 1)[0])
