@@ -31,8 +31,9 @@ class ReplyRetrieval:
         try:
             import joblib
             from nlp_model.train_tfidf import DEFAULT_MODEL, search
-
-            self.model = joblib.load(DEFAULT_MODEL)
+            
+            model_path = os.environ.get("TFIDF_MODEL_PATH", str(DEFAULT_MODEL))
+            self.model = joblib.load(model_path)
             self.search = search
             logging.info("TF-IDF reply model loaded")
         except Exception:
