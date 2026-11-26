@@ -3,7 +3,6 @@ from pathlib import Path
 
 path = {
     "text_phrases": os.getenv("BOT_PATH_TEXT_PHRASES", "./.secret/input/text_phrases/text_phrases.json"), 
-    "token": os.getenv("BOT_PATH_TOKEN", "./.secret/token/.token"), 
     "log_dir": os.getenv("BOT_PATH_LOG_DIR", "./.secret/log"), 
     "data_dir": os.getenv("BOT_PATH_DATA_DIR", "./.secret/data"),
     "readycheck_phrases": os.getenv("BOT_PATH_READYCHECK_PHRASES", "./.secret/input/readycheck_phrases.csv"),
