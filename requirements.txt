@@ -2,3 +2,4 @@ pyTelegramBotAPI>=4.35.0
 pandas
 numpy
 setuptools
+joblib
