@@ -46,7 +46,7 @@ LO = LogOperations(config=config)
 BO = BotOperations(bot=bot)
 chat_messages = ChatMessageStore(path['data_dir'])
 
-LOG_FILENAME = '.secret/log/0.log'
+LOG_FILENAME = Path(path['log_dir']) / '0.log'
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 PhO = PhraseOperations(config=config)
 
