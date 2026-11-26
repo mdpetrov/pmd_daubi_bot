@@ -148,9 +148,9 @@ class PhraseOperations(object):
         return keywords
     
     def decide_free_speech(self, message_text, chat_id, is_reply=False):
-        """Apply the same response probabilities to ordinary messages and replies."""
-        draw = random.random()
-        if draw > 0.5:
+        """Always answer direct replies and apply probability gates to other text."""
+        draw = None if is_reply else random.random()
+        if not is_reply and draw > 0.5:
             return False, "probability_gate", None
 
         matches, status = self.reply_retrieval.candidates(message_text, chat_id)
@@ -160,7 +160,7 @@ class PhraseOperations(object):
         if replies:
             return True, "tfidf_high", random.choice(replies)
 
-        if draw <= 0.05:
+        if is_reply or draw <= 0.05:
             return True, "random_" + status, self.random_phrase(chat_id)
         return False, "silent_" + status, None
 

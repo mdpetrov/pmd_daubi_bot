@@ -14,7 +14,7 @@ class FreeSpeechTests(unittest.TestCase):
         self.phrases.reply_retrieval.candidates.return_value = matches, status
         with patch("pmd_daubi_bot.phrase_operation.random.random", return_value=draw) as rng:
             result = self.phrases.decide_free_speech("Question", -123, is_reply)
-            rng.assert_called_once_with()
+            self.assertEqual(rng.call_count, 0 if is_reply else 1)
         return result
 
     def test_shared_draw_boundaries(self):
@@ -22,11 +22,32 @@ class FreeSpeechTests(unittest.TestCase):
         match = (True, 'tfidf_high', 'Matched')
         cases = [(None, .05, fallback), (.5, .05, fallback), (.749, .05, fallback),
                  (.75, .5, match), (1, .5, match)]
-        for is_reply in (False, True):
-            for score, cutoff, expected in cases:
-                with self.subTest(score=score, is_reply=is_reply):
-                    self.assertEqual(self.decide(score, cutoff, is_reply), expected)
-                    self.assertFalse(self.decide(score, cutoff + .001, is_reply)[0])
+        for score, cutoff, expected in cases:
+            with self.subTest(score=score):
+                self.assertEqual(self.decide(score, cutoff), expected)
+                self.assertFalse(self.decide(score, cutoff + .001)[0])
+
+    def test_direct_replies_always_choose_a_qualifying_match(self):
+        for score in (.75, 1):
+            with self.subTest(score=score):
+                self.assertEqual(self.decide(score, .99, is_reply=True),
+                                 (True, 'tfidf_high', 'Matched'))
+        self.phrases.random_phrase.assert_not_called()
+
+    def test_direct_reply_without_qualifying_match_always_uses_phrase(self):
+        for status in ('no_match', 'matched', 'cooldown', 'search_error', 'disabled'):
+            for score in (None, .749):
+                with self.subTest(status=status, score=score):
+                    self.assertEqual(self.decide(score, .99, is_reply=True, status=status),
+                                     (True, 'random_' + status, 'Fallback'))
+
+    def test_reply_wrapper_returns_fallback_when_retrieval_is_disabled(self):
+        self.phrases.reply_retrieval.candidates.return_value = [], 'disabled'
+        with patch('pmd_daubi_bot.phrase_operation.random.random', return_value=.99) as rng:
+            self.assertEqual(self.phrases.analyze_reply_to_bot('Question', -123), 'Fallback')
+            rng.assert_not_called()
+        self.phrases.reply_retrieval.candidates.assert_called_once_with('Question', -123)
+        self.phrases.random_phrase.assert_called_once_with(-123)
 
     def test_early_gate_never_searches(self):
         self.assertFalse(self.decide(.9, .9)[0])

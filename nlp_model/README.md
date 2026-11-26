@@ -48,19 +48,20 @@ Tests: `python -m unittest discover -s tests -p "test_*tfidf.py"` and
 
 ## Bot integration on Ubuntu
 
-The bot loads the artifact once at startup. It uses the same response
-probabilities for ordinary messages and direct replies. It draws one random
-number per eligible message and skips retrieval when that number exceeds 0.5.
+The bot loads the artifact once at startup. Direct replies to this bot always
+receive an answer. Ordinary messages use one random draw and skip retrieval
+when that number exceeds 0.5.
 
-| Retrieval result | Response probability | Answer |
-| --- | --- | --- |
-| Best score >= 0.75 | 50% | Random distinct answer from all matches >= 0.75 |
-| Best score < 0.75 or retrieval unavailable | 5% | Existing random phrase |
+| Retrieval result | Ordinary-message probability | Direct-reply probability | Answer |
+| --- | --- | --- | --- |
+| Best score >= 0.75 | 50% | 100% | Random distinct answer from all matches >= 0.75 |
+| Best score < 0.75 or retrieval unavailable | 5% | 100% | Existing random phrase |
 
 Each actual search starts a five-second cooldown per chat, even if no answer
-is sent or search fails. The 5% phrase probability also applies when there are
-no matches, the search is on cooldown, the model is disabled or unavailable,
-or the search fails.
+is sent or search fails. When there are no qualifying matches, the search is
+on cooldown, the model is disabled or unavailable, or the search fails, direct
+replies receive an existing random phrase. Ordinary messages use that fallback
+with 5% probability.
 The bot's own messages and replies to polls sent by any bot are excluded from
 free speech. Polls, commands, and maintenance continue independently.
 Model answers are sent as Telegram replies to the triggering message.
