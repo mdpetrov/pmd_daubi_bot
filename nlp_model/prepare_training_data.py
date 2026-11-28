@@ -1,8 +1,9 @@
 """Extract text-only message/reply pairs from a Telegram export or bot archive.
 
 Usage: python nlp_model/prepare_training_data.py [export.json or chat.jsonl] [-o prepared.json]
-Without an input path, uses the sole JSON in .secret/nlp_model/training_data.
-The default output also stays in that ignored, private directory.
+Without an input path, uses the sole JSON in the training_data directory beside
+the configured TFIDF_PREPARED_PATH. The configured path is also the default
+output for the prepared dataset.
 """
 
 import argparse

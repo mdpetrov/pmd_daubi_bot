@@ -22,12 +22,12 @@ class PhraseOperations(object):
         path = self.config.path
         weight = self.config.weight
         LO = self.LO
-        LO.write_log(chat_id if chat_id else 0, ': Load phrases')
+        LO.write_log(chat_id, ': Load phrases')
         phrases = self.load_phrases(chat_id)
         
         # Handle empty phrase list
         if not phrases:
-            LO.write_log(chat_id if chat_id else 0, 'Phrase list is empty')
+            LO.write_log(chat_id, 'Phrase list is empty')
             return "Нет фраз"
         
         phrases = pd.DataFrame(phrases)

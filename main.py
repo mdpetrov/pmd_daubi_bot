@@ -11,7 +11,6 @@ import re
 import logging
 from datetime import datetime, timedelta
 
-from pathlib import Path
 # Custom packages
 
 from pmd_daubi_bot.config import config
@@ -48,8 +47,12 @@ LO = LogOperations(config=config)
 BO = BotOperations(bot=bot)
 chat_messages = ChatMessageStore(path['data_dir'])
 
-LOG_FILENAME = Path(path['log_dir']) / '0.log'
-logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+# systemd captures stderr in the journal, so general logs go to journalctl.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    force=True,
+)
 PhO = PhraseOperations(config=config)
 
 
@@ -419,5 +422,5 @@ def handle_lfp_callback(call):
     PO.save_params(chat_id, local_params)
         
 if __name__ == '__main__':
-    LO.write_log(0, 'Start the bot')        
+    logging.info('Start the bot')
     bot.polling(none_stop=True, interval=1) #обязательная для работы бота
