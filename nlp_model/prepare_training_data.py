@@ -11,10 +11,12 @@ import json
 from pathlib import Path
 import re
 import unicodedata
+from pmd_daubi_bot.config import config
 
+path = config.path
 
-TRAINING_DIR = Path(__file__).resolve().parent.parent / ".secret" / "nlp_model" / "training_data"
-DEFAULT_OUTPUT = TRAINING_DIR / "prepared_tfidf.json"
+TRAINING_DIR = Path(path['tfidf_prepared_path']).parent / "training_data"
+DEFAULT_OUTPUT = Path(path['tfidf_prepared_path'])
 MEDIA_FIELDS = (
     "photo", "file", "media_type", "poll", "contact_information",
     "contact_vcard", "location_information", "rich_message",

@@ -10,15 +10,16 @@ import joblib
 import numpy as np
 import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
+from pmd_daubi_bot.config import config
 
 if __package__:
     from .prepare_training_data import DEFAULT_OUTPUT, normalize_for_search
 else:
     from prepare_training_data import DEFAULT_OUTPUT, normalize_for_search
 
+path = config.path
 
-DEFAULT_MODEL = Path(__file__).resolve().parent.parent / ".secret" / "nlp_model" / "tfidf.joblib"
-
+DEFAULT_MODEL = Path(path['tfidf_model_path'])
 
 def train_model(dataset, word_features=30_000, char_features=50_000):
     """Return a portable bundle of vectorizers, sparse indices and aligned replies."""

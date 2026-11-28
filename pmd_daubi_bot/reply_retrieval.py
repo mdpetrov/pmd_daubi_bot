@@ -3,10 +3,13 @@
 import logging
 import os
 import time
+from pathlib import Path
+
+from pmd_daubi_bot.config import config
 
 
 MIN_REPLY_SCORE = 0.75
-
+path = config.path
 
 def classify_message(message, bot_id):
     """Return (exclude free speech, direct reply to this bot)."""
@@ -32,7 +35,7 @@ class ReplyRetrieval:
             import joblib
             from nlp_model.train_tfidf import DEFAULT_MODEL, search
             
-            model_path = os.environ.get("TFIDF_MODEL_PATH", str(DEFAULT_MODEL))
+            model_path = Path(path['tfidf_model_path'])
             self.model = joblib.load(model_path)
             self.search = search
             logging.info("TF-IDF reply model loaded")

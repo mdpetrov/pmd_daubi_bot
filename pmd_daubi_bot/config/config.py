@@ -2,11 +2,13 @@ import os
 from pathlib import Path
 
 path = {
-    "text_phrases": os.getenv("BOT_PATH_TEXT_PHRASES", "./.secret/input/text_phrases/text_phrases.json"), 
-    "log_dir": os.getenv("BOT_PATH_LOG_DIR", "./.secret/log"), 
-    "data_dir": os.getenv("BOT_PATH_DATA_DIR", "./.secret/data"),
-    "readycheck_phrases": os.getenv("BOT_PATH_READYCHECK_PHRASES", "./.secret/input/readycheck_phrases.csv"),
-    "response_keywords": os.getenv("BOT_PATH_RESPONSE_KEYWORDS", "./.secret/input/response_keywords.json")
+    "text_phrases": os.getenv("BOT_PATH_TEXT_PHRASES"), 
+    "log_dir": os.getenv("BOT_PATH_LOG_DIR"), 
+    "data_dir": os.getenv("BOT_PATH_DATA_DIR"),
+    "readycheck_phrases": os.getenv("BOT_PATH_READYCHECK_PHRASES"),
+    "response_keywords": os.getenv("BOT_PATH_RESPONSE_KEYWORDS"),
+    "tfidf_model_path": os.getenv("TFIDF_MODEL_PATH"),
+    "tfidf_prepared_path": os.getenv("TFIDF_PREPARED_PATH"),
 }
 
 Path(path['log_dir']).mkdir(parents=True, exist_ok=True)
